@@ -28,6 +28,7 @@ if (existsSync("../docs")) {
 }
 
 export default defineConfig({
+  base: "/finanalyzer-app/",
   plugins: [
     tanstackRouter({
       target: "react",
