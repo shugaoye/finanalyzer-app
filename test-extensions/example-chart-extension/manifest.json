@@ -1,0 +1,48 @@
+{
+  "id": "example-chart-extension",
+  "name": "Chart Extension",
+  "version": "1.0.0",
+  "publisher": "Finanalyzer Team",
+  "description": "Example extension with interactive charts",
+  "widgets": [
+    {
+      "id": "line-chart",
+      "name": "Line Chart",
+      "description": "Interactive line chart widget",
+      "category": "visualization",
+      "version": "1.0.0",
+      "entryPoint": "index.js",
+      "params": [
+        {
+          "paramName": "symbol",
+          "label": "Stock Symbol",
+          "description": "Stock symbol to display",
+          "type": "string",
+          "value": "AAPL",
+          "required": true
+        },
+        {
+          "paramName": "period",
+          "label": "Time Period",
+          "description": "Time period for chart",
+          "type": "select",
+          "value": "1M",
+          "options": [
+            { "value": "1D", "label": "1 Day" },
+            { "value": "1W", "label": "1 Week" },
+            { "value": "1M", "label": "1 Month" },
+            { "value": "3M", "label": "3 Months" },
+            { "value": "1Y", "label": "1 Year" }
+          ]
+        },
+        {
+          "paramName": "showVolume",
+          "label": "Show Volume",
+          "description": "Display volume data",
+          "type": "boolean",
+          "value": true
+        }
+      ]
+    }
+  ]
+}

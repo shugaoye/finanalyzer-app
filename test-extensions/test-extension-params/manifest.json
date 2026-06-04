@@ -1,0 +1,85 @@
+{
+  "id": "test-extension-params",
+  "name": "Test Extension with Parameters",
+  "version": "1.0.0",
+  "publisher": "Test Publisher",
+  "description": "A test extension with parameters and links",
+  "widgets": [
+    {
+      "id": "test-widget-1",
+      "name": "Test Widget 1",
+      "description": "A test widget with parameters",
+      "category": "test",
+      "version": "1.0.0",
+      "entryPoint": "index.js",
+      "params": [
+        {
+          "paramName": "enable_feature",
+          "description": "Enable or disable the main feature",
+          "label": "Enable Feature",
+          "type": "boolean",
+          "value": true
+        },
+        {
+          "paramName": "analysis_type",
+          "description": "Select the type of analysis to perform",
+          "value": "technical",
+          "label": "Analysis Type",
+          "type": "text",
+          "options": [
+            { "label": "Technical Analysis", "value": "technical" },
+            { "label": "Fundamental Analysis", "value": "fundamental" },
+            { "label": "Sentiment Analysis", "value": "sentiment" }
+          ]
+        },
+        {
+          "paramName": "lookback_period",
+          "description": "Number of days to look back",
+          "value": 30,
+          "label": "Lookback Period (days)",
+          "type": "number",
+          "min": 1,
+          "max": 365,
+          "dependsOn": ["enable_feature"]
+        }
+      ]
+    },
+    {
+      "id": "test-widget-2",
+      "name": "Test Widget 2",
+      "description": "A test widget with linked parameters",
+      "category": "test",
+      "version": "1.0.0",
+      "entryPoint": "index.js",
+      "params": [
+        {
+          "paramName": "widget2_param",
+          "description": "A parameter linked to widget 1",
+          "value": "default",
+          "label": "Widget 2 Parameter",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "parameters": {
+    "extension_param": {
+      "paramName": "extension_param",
+      "label": "Extension Level Parameter",
+      "description": "A parameter at the extension level",
+      "type": "text",
+      "value": "extension_value"
+    }
+  },
+  "parameterLinks": [
+    {
+      "source": "test-extension-params.test-widget-1.analysis_type",
+      "target": "test-extension-params.test-widget-2.widget2_param"
+    },
+    {
+      "source": "test-extension-params.extension_param",
+      "target": "test-extension-params.test-widget-1.analysis_type",
+      "transform": "value.toUpperCase()"
+    }
+  ]
+}

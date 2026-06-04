@@ -1,0 +1,39 @@
+{
+  "id": "test-extension-2",
+  "name": "Test Extension 2",
+  "version": "1.0.0",
+  "publisher": "Test Publisher",
+  "description": "Second test extension with i18n support",
+  "widgets": [
+    {
+      "id": "test-widget-2",
+      "name": "Test Widget 2",
+      "description": "Second test widget",
+      "category": "test",
+      "version": "1.0.0",
+      "entryPoint": "index.js",
+      "i18n": {
+        "en-US": {
+          "name": "Test Widget 2",
+          "description": "Second test widget"
+        },
+        "zh-CN": {
+          "name": "测试组件2",
+          "description": "第二个测试组件"
+        }
+      }
+    }
+  ],
+  "i18n": {
+    "en-US": {
+      "name": "Test Extension 2",
+      "description": "Second test extension with i18n support",
+      "publisher": "Test Publisher"
+    },
+    "zh-CN": {
+      "name": "测试扩展2",
+      "description": "带有国际化支持的第二个测试扩展",
+      "publisher": "测试发布者"
+    }
+  }
+}

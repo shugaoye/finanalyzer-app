@@ -1,0 +1,359 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+@import "@openbb/ui/dist/lib.css";
+@import "@openbb/ui/dist/fonts.css";
+
+/* Global scrollbar styling - OpenBB Workspace style */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-light-100, #f3f4f7);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-light-400, #d0d5dd);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-light-500, #9da5b2);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: var(--color-dark-600, #303038);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-dark-300, #505059);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-dark-100, #6d6e74);
+}
+
+@layer base {
+  :root {
+    --background: #f7f8f9;
+    --foreground: #1e2939;
+    --card: #f7f8f9;
+    --card-foreground: #1e2939;
+    --popover: #f7f8f9;
+    --popover-foreground: #1e2939;
+    --primary: #0088CC;
+    --primary-foreground: #ffffff;
+    --secondary: #f3f4f7;
+    --secondary-foreground: #0f1828;
+    --muted: #ebecf0;
+    --muted-foreground: #d0d5dd;
+    --accent: #f7f8f9;
+    --accent-foreground: #1e2939;
+    --danger: #f25454;
+    --danger-foreground: #ffffff;
+    --border: #d0d5dd;
+    --input: #d0d5dd;
+    --ring: #0088CC;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: #151518;
+    --foreground: #f3f4f7;
+    --card: #212127;
+    --card-foreground: #f3f4f7;
+    --popover: #151518;
+    --popover-foreground: #f3f4f7;
+    --primary: #0088CC;
+    --primary-foreground: #ffffff;
+    --secondary: #46464f;
+    --secondary-foreground: #212127;
+    --muted: #46464f;
+    --muted-foreground: #6d6e74;
+    --accent: #2a2a31;
+    --accent-foreground: #f3f4f7;
+    --danger: #f25454;
+    --danger-foreground: #ffffff;
+    --border: #46464f;
+    --input: #46464f;
+    --ring: #4dacdb;
+  }
+}
+
+@layer components {
+  /* Button Base Styles */
+  .BB-Button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.125rem;
+    font-weight: 400;
+    outline: none;
+    transition: all 0.2s;
+  }
+
+  .BB-Button:focus-visible {
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .BB-Button:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  /* Primary Button */
+  .BB-Button.bg-grey-750 {
+    background-color: #3d4758;
+    color: #f7f8f9;
+  }
+
+  .BB-Button.bg-grey-750:hover:not(:disabled) {
+    background-color: #0f1828;
+  }
+
+  .BB-Button.bg-grey-750:disabled {
+    background-color: #d6dce5;
+    color: #9da5b2;
+  }
+
+  /* Dark Mode Primary Button */
+  .dark .BB-Button.dark\:bg-grey-100 {
+    background-color: #f3f4f7;
+    color: #303038;
+  }
+
+  .dark .BB-Button.dark\:bg-grey-100:hover:not(:disabled) {
+    background-color: #f7f8f9;
+    color: #24242a;
+  }
+
+  /* Select Component Dropdown Scrollbar */
+  [role="listbox"] {
+    max-height: 300px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Select Component Dropdown Fix for Dark Mode */
+  .dark [role="listbox"] {
+    color: #111827 !important; /* Text color for dropdown */
+    background-color: #ffffff !important; /* Background color for dropdown */
+  }
+
+  .dark [role="option"] {
+    color: #111827 !important; /* Text color for dropdown options */
+  }
+
+  .dark [role="option"]:hover {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+  }
+
+  .dark [role="option"][data-disabled] {
+    color: #9ca3af !important;
+  }
+
+  .dark [role="option"][data-highlighted] {
+    background-color: #e5e7eb !important;
+    color: #111827 !important;
+  }
+
+  .dark .BB-Button.dark\:bg-grey-100:focus-visible {
+    background-color: #ebecf0;
+    color: #24242a;
+  }
+
+  .dark .BB-Button.dark\:bg-grey-100:disabled {
+    background-color: #303038;
+    color: #46464f;
+  }
+
+  /* Secondary Button */
+  .BB-Button.bg-grey-100 {
+    background-color: #f3f4f7;
+    color: #0f1828;
+  }
+
+  .BB-Button.bg-grey-100:hover:not(:disabled) {
+    background-color: #d6dce5;
+  }
+
+  .BB-Button.bg-grey-100:disabled {
+    background-color: #ebecf0;
+    color: #d6dce5;
+  }
+
+  /* Dark Mode Secondary Button */
+  .dark .BB-Button.dark\:bg-dark-600 {
+    background-color: #303038;
+    color: #f3f4f7;
+  }
+
+  .dark .BB-Button.dark\:bg-dark-600:hover:not(:disabled) {
+    background-color: #303038;
+    color: #ffffff;
+  }
+
+  .dark .BB-Button.dark\:bg-dark-600:focus-visible {
+    background-color: #2a2a31;
+    color: #ffffff;
+  }
+
+  .dark .BB-Button.dark\:bg-dark-600:disabled {
+    background-color: #212127;
+    color: #46464f;
+  }
+
+  /* Button Sizes */
+  .BB-Button.body-xs-medium.h-8.px-3 {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+    font-weight: 500;
+    height: 2rem;
+    padding: 0 0.75rem;
+  }
+
+  .BB-Button.body-xs-medium.h-\[26px\].px-2 {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+    font-weight: 500;
+    height: 26px;
+    padding: 0 0.5rem;
+  }
+
+  .BB-Button.body-sm-medium.h-10.px-4 {
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    font-weight: 500;
+    height: 2.5rem;
+    padding: 0 1rem;
+  }
+
+  .BB-Button.body-md-medium.h-12.px-5 {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 500;
+    height: 3rem;
+    padding: 0 1.25rem;
+  }
+
+  .BB-Button.body-lg-medium.h-14.px-5 {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    font-weight: 500;
+    height: 3.5rem;
+    padding: 0 1.25rem;
+  }
+}
+
+@layer utilities {
+  .shadow-light-1 {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-dark-1 {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .dark\:shadow-dark-1 {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.modal-content {
+  background-color: rgb(255, 255, 255);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dark .modal-content {
+  background-color: #212127;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #d0d5dd;
+}
+
+.dark .modal-header {
+  border-bottom-color: #46464f;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e2939;
+}
+
+.dark .modal-title {
+  color: #f3f4f7;
+}
+
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  color: rgb(156, 163, 175);
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background-color: rgb(243, 244, 246);
+  color: rgb(107, 114, 128);
+}
+
+.dark .modal-close {
+  color: rgb(107, 114, 128);
+}
+
+.dark .modal-close:hover {
+  background-color: rgb(48, 48, 56);
+  color: rgb(209, 213, 219);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgb(226, 232, 240);
+  background-color: rgb(249, 250, 251);
+}
+
+.dark .modal-footer {
+  border-top-color: rgb(48, 48, 56);
+  background-color: rgb(31, 31, 35);
+}

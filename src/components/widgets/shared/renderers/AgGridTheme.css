@@ -1,0 +1,172 @@
+/* AG Grid Theme Customization */
+/* Updated for AG Grid v35+ Theming API (themeQuartz) */
+/* Using @openbb/ui design system color palette */
+
+.ag-grid-table-widget {
+  --ag-font-size: 12px;
+  --ag-header-height: 33px;
+  --ag-row-height: 32px;
+  --ag-cell-horizontal-padding: 7px;
+  --ag-header-background-color: var(--color-light-100);
+  --ag-header-foreground-color: var(--color-light-600);
+  --ag-row-hover-color: var(--color-light-50);
+  --ag-background-color: var(--color-white, #ffffff);
+  --ag-foreground-color: var(--color-light-900, #111827);
+  --ag-border-color: var(--color-light-200, #e5e7eb);
+}
+
+/* Header styling */
+.ag-grid-table-widget .ag-header {
+  background-color: var(--ag-header-background-color);
+  border-bottom: 1px solid var(--ag-border-color);
+}
+
+.ag-grid-table-widget .ag-header-cell {
+  border-right: 1px solid var(--ag-border-color);
+}
+
+.ag-grid-table-widget .ag-header-cell:last-child {
+  border-right: none;
+}
+
+.ag-grid-table-widget .ag-header-cell-text {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+  color: var(--ag-header-foreground-color);
+}
+
+/* Cell styling with tabular numbers for better alignment */
+.ag-grid-table-widget .ag-cell {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  font-size: 12px;
+  font-weight: 400;
+  padding-left: var(--ag-cell-horizontal-padding);
+  padding-right: var(--ag-cell-horizontal-padding);
+  color: var(--ag-foreground-color);
+}
+
+/* Row styling */
+.ag-grid-table-widget .ag-row {
+  border-bottom: 1px solid var(--ag-border-color);
+}
+
+.ag-grid-table-widget .ag-row:hover {
+  background-color: var(--ag-row-hover-color);
+}
+
+.ag-grid-table-widget .ag-row-odd {
+  background-color: var(--ag-background-color);
+}
+
+.ag-grid-table-widget .ag-row-even {
+  background-color: var(--ag-background-color);
+}
+
+/* Dark mode support using @openbb/ui dark palette */
+.dark .ag-grid-table-widget {
+  --ag-background-color: var(--color-dark-900, #151518);
+  --ag-foreground-color: var(--color-light-100, #f9fafb);
+  --ag-header-background-color: var(--color-dark-900);
+  --ag-header-foreground-color: var(--color-dark-50);
+  --ag-row-hover-color: var(--color-dark-800);
+  --ag-border-color: var(--color-dark-600, #3a3a44);
+}
+
+.dark .ag-grid-table-widget .ag-header {
+  background-color: var(--ag-header-background-color);
+}
+
+.dark .ag-grid-table-widget .ag-header-cell-text {
+  color: var(--ag-header-foreground-color);
+}
+
+.dark .ag-grid-table-widget .ag-cell {
+  color: var(--ag-foreground-color);
+}
+
+.dark .ag-grid-table-widget .ag-row:hover {
+  background-color: var(--ag-row-hover-color);
+}
+
+.dark .ag-grid-table-widget .ag-row-odd {
+  background-color: var(--ag-background-color);
+}
+
+.dark .ag-grid-table-widget .ag-row-even {
+  background-color: var(--ag-background-color);
+}
+
+/* Filter menu styling */
+.ag-grid-table-widget .ag-filter-body {
+  align-items: center;
+  gap: 10px;
+  display: flex;
+  padding: 8px;
+}
+
+.ag-grid-table-widget .ag-filter-to {
+  margin-top: 0;
+}
+
+/* Pagination panel (if enabled in future) */
+.ag-grid-table-widget .ag-paging-panel {
+  height: 30px;
+  font-size: 12px;
+}
+
+/* Menu button styling */
+.ag-grid-table-widget .ag-header-cell-menu-button {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ag-grid-table-widget .ag-header-cell:hover .ag-header-cell-menu-button {
+  opacity: 1;
+}
+
+/* Column resize handle */
+.ag-grid-table-widget .ag-header-cell-resize {
+  width: 8px;
+}
+
+/* Ensure grid fills container */
+.ag-grid-table-widget {
+  height: 100%;
+  width: 100%;
+}
+
+/* Scrollbar styling for @openbb/ui consistency */
+.ag-grid-table-widget ::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.ag-grid-table-widget ::-webkit-scrollbar-track {
+  background: var(--color-light-100, #f3f4f7);
+  border-radius: 4px;
+}
+
+.ag-grid-table-widget ::-webkit-scrollbar-thumb {
+  background: var(--color-light-400, #d0d5dd);
+  border-radius: 4px;
+}
+
+.ag-grid-table-widget ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-light-500, #9da5b2);
+}
+
+/* Dark mode scrollbar */
+.dark .ag-grid-table-widget ::-webkit-scrollbar-track {
+  background: var(--color-dark-600, #303038);
+}
+
+.dark .ag-grid-table-widget ::-webkit-scrollbar-thumb {
+  background: var(--color-dark-300, #505059);
+}
+
+.dark .ag-grid-table-widget ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-dark-100, #6d6e74);
+}

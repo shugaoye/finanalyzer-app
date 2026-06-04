@@ -1,0 +1,59 @@
+.resize-handle-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.resize-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-border, #e2e8f0);
+  transition: background-color 0.2s;
+  pointer-events: auto;
+}
+
+.resize-handle.horizontal {
+  width: 1px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.resize-handle.vertical {
+  height: 1px;
+  width: 100%;
+  cursor: row-resize;
+}
+
+.resize-handle:hover,
+.resize-handle.dragging {
+  background-color: var(--color-primary, #0066ff);
+}
+
+.resize-handle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-primary, #0066ff);
+}
+
+.copilot-handle-btn {
+  position: absolute;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
+  border-radius: 4px;
+  background-color: var(--color-primary, #0066ff);
+  color: white;
+  cursor: pointer;
+  border: none;
+  right: -20px;
+  font-size: 18px;
+}
+
+.copilot-handle-btn:hover {
+  background-color: var(--color-primary-dark, #0052cc);
+}

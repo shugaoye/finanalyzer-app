@@ -1,0 +1,17 @@
+{
+  "id": "test-extension-1",
+  "name": "Test Extension 1",
+  "version": "1.0.0",
+  "publisher": "Test Publisher",
+  "description": "First test extension for validation",
+  "widgets": [
+    {
+      "id": "test-widget-1",
+      "name": "Test Widget 1",
+      "description": "First test widget",
+      "category": "test",
+      "version": "1.0.0",
+      "entryPoint": "index.js"
+    }
+  ]
+}

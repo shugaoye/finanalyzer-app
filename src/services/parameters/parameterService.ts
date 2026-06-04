@@ -1,0 +1,266 @@
+import type { WidgetParameter } from '../../types/widgets';
+
+interface ParamOptionsCache {
+  [key: string]: {
+    options: Array<{ value: unknown; label: string }>;
+    timestamp: number;
+  };
+}
+
+interface FetchOptionsParams {
+  parameter: WidgetParameter;
+  widgetId: string;
+  instanceId: string;
+  baseUrl?: string;
+}
+
+class ParameterService {
+  private optionsCache: ParamOptionsCache = {};
+  private cacheDuration = 30000; // 30 seconds
+  private fetchPromises: Map<string, Promise<Array<{ value: unknown; label: string }>>> = new Map();
+
+  /**
+   * Fetch options for an endpoint parameter
+   */
+  async fetchParamOptions({ parameter, widgetId, instanceId, baseUrl = 'http://localhost:8000/api/v1' }: FetchOptionsParams): Promise<Array<{ value: unknown; label: string }>> {
+    if (!parameter.optionsEndpoint) {
+      throw new Error('Endpoint parameter missing optionsEndpoint');
+    }
+
+    const cacheKey = `${widgetId}:${instanceId}:${parameter.name}:${parameter.optionsEndpoint}`;
+    
+    // Check if we already have a fetch in progress
+    if (this.fetchPromises.has(cacheKey)) {
+      return this.fetchPromises.get(cacheKey)!;
+    }
+
+    // Check cache
+    const cached = this.optionsCache[cacheKey];
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < this.cacheDuration) {
+      return cached.options;
+    }
+
+    // Create fetch promise
+    const fetchPromise = this.performFetch(parameter, baseUrl, cacheKey);
+    this.fetchPromises.set(cacheKey, fetchPromise);
+
+    try {
+      const options = await fetchPromise;
+      return options;
+    } finally {
+      this.fetchPromises.delete(cacheKey);
+    }
+  }
+
+  /**
+   * Perform the actual fetch operation
+   */
+  private async performFetch(
+    parameter: WidgetParameter,
+    baseUrl: string,
+    cacheKey: string
+  ): Promise<Array<{ value: unknown; label: string }>> {
+    try {
+      const url = this.buildOptionsUrl(parameter, baseUrl);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch options: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const options = this.processOptionsResponse(data);
+
+      // Cache the results
+      this.optionsCache[cacheKey] = {
+        options,
+        timestamp: Date.now(),
+      };
+
+      return options;
+    } catch (error) {
+      console.error('Error fetching parameter options:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Build the options URL with parameters
+   */
+  private buildOptionsUrl(parameter: WidgetParameter, baseUrl: string): string {
+    const endpoint = parameter.optionsEndpoint!;
+    const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+    
+    if (parameter.optionsParams) {
+      const params = new URLSearchParams();
+      Object.entries(parameter.optionsParams).forEach(([key, value]) => {
+        params.append(key, String(value));
+      });
+      return `${url}?${params.toString()}`;
+    }
+    
+    return url;
+  }
+
+  /**
+   * Process the API response into options format
+   */
+  private processOptionsResponse(data: unknown): Array<{ value: unknown; label: string }> {
+    if (Array.isArray(data)) {
+      return data.map(item => {
+        if (typeof item === 'object' && item !== null) {
+          return {
+            value: item.value !== undefined ? item.value : item.id || item.symbol,
+            label: item.label !== undefined ? item.label : item.name || String(item.value || item.id || item.symbol),
+          };
+        }
+        return {
+          value: item,
+          label: String(item),
+        };
+      });
+    }
+
+    if (typeof data === 'object' && data !== null) {
+      const dataObj = data as Record<string, unknown>;
+      if (dataObj.options) {
+        return this.processOptionsResponse(dataObj.options);
+      }
+      if (dataObj.items) {
+        return this.processOptionsResponse(dataObj.items);
+      }
+    }
+    
+    return [];
+  }
+
+  /**
+   * Clear cache for a specific parameter
+   */
+  clearCache(widgetId: string, instanceId: string, parameterName: string): void {
+    const keys = Object.keys(this.optionsCache).filter(key => 
+      key.startsWith(`${widgetId}:${instanceId}:${parameterName}:`)
+    );
+    
+    keys.forEach(key => {
+      delete this.optionsCache[key];
+    });
+  }
+
+  /**
+   * Clear all cache
+   */
+  clearAllCache(): void {
+    this.optionsCache = {};
+    this.fetchPromises.clear();
+  }
+
+  /**
+   * Validate parameter values
+   */
+  validateParameter(parameter: WidgetParameter, value: unknown): boolean {
+    if (parameter.required && (value === undefined || value === null || value === '')) {
+      return false;
+    }
+
+    switch (parameter.type) {
+      case 'number': {
+        if (typeof value !== 'number' && typeof value !== 'string') {
+          return false;
+        }
+        const numValue = typeof value === 'string' ? parseFloat(value) : value;
+        if (isNaN(numValue as number)) {
+          return false;
+        }
+        if (parameter.min !== undefined && (numValue as number) < parameter.min) {
+          return false;
+        }
+        if (parameter.max !== undefined && (numValue as number) > parameter.max) {
+          return false;
+        }
+        return true;
+      }
+
+      case 'date':
+        return !isNaN(Date.parse(String(value)));
+
+      case 'select':
+        if (!parameter.options) {
+          return true;
+        }
+        return parameter.options.some(option => option.value === value);
+
+      case 'endpoint':
+        // Endpoint parameters are validated by the API
+        return true;
+
+      case 'form':
+        // Form parameters are validated on submission
+        return true;
+
+      default:
+        return true;
+    }
+  }
+
+  /**
+   * Submit form parameter data
+   */
+  async submitFormParameter(
+    parameter: WidgetParameter,
+    formData: Record<string, unknown>,
+    connectionUrl: string = ''
+  ): Promise<unknown> {
+    if (!parameter.endpoint) {
+      throw new Error('Form parameter missing endpoint');
+    }
+
+    // Compose URL properly
+    const isFullUrl = parameter.endpoint.startsWith('http://') || parameter.endpoint.startsWith('https://');
+    let url: string;
+    if (isFullUrl) {
+      url = parameter.endpoint;
+    } else {
+      // Normalize connectionUrl: remove trailing slash
+      const normalizedBaseUrl = connectionUrl.endsWith('/') 
+        ? connectionUrl.slice(0, -1) 
+        : connectionUrl;
+      
+      // Ensure endpoint starts with /
+      const normalizedEndpoint = parameter.endpoint.startsWith('/') 
+        ? parameter.endpoint 
+        : `/${parameter.endpoint}`;
+      
+      url = `${normalizedBaseUrl}${normalizedEndpoint}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Form submission failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error submitting form parameter:', error);
+      throw error;
+    }
+  }
+}
+
+export const parameterService = new ParameterService();
+export type { FetchOptionsParams };

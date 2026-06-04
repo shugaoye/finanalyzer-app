@@ -1,0 +1,50 @@
+{
+  "id": "example-i18n-extension",
+  "name": "Example I18n Extension",
+  "version": "1.0.0",
+  "publisher": "Finanalyzer Team",
+  "description": "An example extension with i18n support",
+  "homepage": "https://finanalyzer.com",
+  "repository": "https://github.com/finanalyzer/example-i18n-extension",
+  "license": "MIT",
+  "i18n": {
+    "en": {
+      "name": "Example I18n Extension",
+      "description": "An example extension with i18n support",
+      "publisher": "Finanalyzer Team"
+    },
+    "zh": {
+      "name": "示例国际化扩展",
+      "description": "一个支持国际化的示例扩展",
+      "publisher": "Finanalyzer团队"
+    }
+  },
+  "widgets": [
+    {
+      "id": "example-i18n-widget",
+      "name": "Example I18n Widget",
+      "description": "A widget with i18n support",
+      "category": "Example",
+      "version": "1.0.0",
+      "entryPoint": "index.js",
+      "i18n": {
+        "en": {
+          "name": "Example I18n Widget",
+          "description": "A widget with i18n support",
+          "labels": {
+            "title": "Widget Title",
+            "description": "Widget Description"
+          }
+        },
+        "zh": {
+          "name": "示例国际化部件",
+          "description": "一个支持国际化的部件",
+          "labels": {
+            "title": "部件标题",
+            "description": "部件描述"
+          }
+        }
+      }
+    }
+  ]
+}

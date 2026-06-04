@@ -1,0 +1,93 @@
+{
+  "id": "example-parameter-linking",
+  "name": "Parameter Linking Extension",
+  "version": "1.0.0",
+  "publisher": "Finanalyzer Team",
+  "description": "Example extension with parameter linking",
+  "parameters": {
+    "apiKey": {
+      "paramName": "apiKey",
+      "label": "API Key",
+      "description": "API key for external services",
+      "type": "string",
+      "value": "",
+      "required": false
+    },
+    "defaultSymbol": {
+      "paramName": "defaultSymbol",
+      "label": "Default Symbol",
+      "description": "Default stock symbol",
+      "type": "string",
+      "value": "AAPL",
+      "required": true
+    }
+  },
+  "parameterLinks": [
+    {
+      "source": "example-parameter-linking.apiKey",
+      "target": "example-parameter-linking.stock-widget.apiKey"
+    },
+    {
+      "source": "example-parameter-linking.apiKey",
+      "target": "example-parameter-linking.news-widget.apiKey"
+    },
+    {
+      "source": "example-parameter-linking.defaultSymbol",
+      "target": "example-parameter-linking.stock-widget.symbol"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "stock-widget",
+      "name": "Stock Widget",
+      "description": "Stock information widget",
+      "category": "finance",
+      "version": "1.0.0",
+      "entryPoint": "stock-widget.js",
+      "params": [
+        {
+          "paramName": "symbol",
+          "label": "Symbol",
+          "description": "Stock symbol",
+          "type": "string",
+          "value": "AAPL",
+          "required": true
+        },
+        {
+          "paramName": "apiKey",
+          "label": "API Key",
+          "description": "API key for stock data",
+          "type": "string",
+          "value": "",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "news-widget",
+      "name": "News Widget",
+      "description": "Stock news widget",
+      "category": "finance",
+      "version": "1.0.0",
+      "entryPoint": "news-widget.js",
+      "params": [
+        {
+          "paramName": "symbol",
+          "label": "Symbol",
+          "description": "Stock symbol for news",
+          "type": "string",
+          "value": "AAPL",
+          "required": true
+        },
+        {
+          "paramName": "apiKey",
+          "label": "API Key",
+          "description": "API key for news data",
+          "type": "string",
+          "value": "",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "test-extension-3",
+  "name": "Test Extension 3",
+  "version": "1.0.0",
+  "publisher": "Test Publisher",
+  "description": "A test extension for packaging",
+  "widgets": [
+    {
+      "id": "test-widget-3",
+      "name": "Test Widget 3",
+      "description": "A test widget",
+      "category": "test",
+      "version": "1.0.0",
+      "entryPoint": "index.js"
+    }
+  ]
+}
