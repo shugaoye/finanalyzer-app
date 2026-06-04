@@ -3,7 +3,8 @@ name: Deploy Static to GitHub Pages
 on:
   push:
     branches:
-      - main  # Deploy on push to main branch
+      - main
+      - master  # Support both main and master branch names
 
 jobs:
   build-and-deploy:
