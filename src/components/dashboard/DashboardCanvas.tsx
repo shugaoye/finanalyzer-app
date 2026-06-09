@@ -1,5 +1,5 @@
 import { Button, Icon } from "@openbb/ui";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Layout, LayoutItem } from "react-grid-layout";
 import { ResponsiveGridLayout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -121,18 +121,38 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
   // Determine active tab (use prop if provided, otherwise first tab)
   const activeTab = propActiveTab || (tabs.length > 0 ? tabs[0].id : "");
 
-  // Filter widgets based on active tab
-  const filteredWidgets = tabs.length > 0 
-    ? widgets.filter(widget => widget.data?.tabId === activeTab)
-    : widgets;
+  // Filter widgets based on active tab (with deduplication by widget.id)
+  const filteredWidgets = useMemo(() => {
+    const base = tabs.length > 0 
+      ? widgets.filter(widget => widget.data?.tabId === activeTab)
+      : widgets;
+    
+    // Deduplicate by widget.id, keeping the first occurrence
+    const seen = new Set<string>();
+    return base.filter(widget => {
+      if (!widget.id || seen.has(widget.id)) return false;
+      seen.add(widget.id);
+      return true;
+    });
+  }, [widgets, tabs, activeTab]);
 
-  // Filter layout based on active tab
-  const filteredLayout = tabs.length > 0
-    ? layout.filter(item => {
-        const widget = widgets.find(w => w.id === item.i);
-        return widget?.data?.tabId === activeTab;
-      })
-    : layout;
+  // Filter layout based on active tab (with deduplication by item.i)
+  const filteredLayout = useMemo(() => {
+    const baseLayout = tabs.length > 0
+      ? layout.filter(item => {
+          const widget = widgets.find(w => w.id === item.i);
+          return widget?.data?.tabId === activeTab;
+        })
+      : layout;
+    
+    // Deduplicate by item.i, keeping the first occurrence
+    const seen = new Set<string>();
+    return baseLayout.filter(item => {
+      if (!item.i || seen.has(item.i)) return false;
+      seen.add(item.i);
+      return true;
+    });
+  }, [layout, widgets, tabs, activeTab]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gridWidth, setGridWidth] = useState(1200);
@@ -495,7 +515,7 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
 
   const handleLayoutChange = useCallback(
     (newLayout: Layout, _layouts: any) => {
-      const layoutItems = newLayout as LayoutItem[];
+      const layoutItems = (newLayout as LayoutItem[]).filter((item) => item.i);
       setLayout((prevLayout) => {
         const newLayoutMap = new Map(layoutItems.map((item) => [item.i, item]));
         return prevLayout.map((item) => newLayoutMap.get(item.i) || item);
