@@ -59,6 +59,7 @@ export default {
     darkMode: "深色模式",
     lightMode: "浅色模式",
     general: "通用",
+    mcp: "MCP 服务器",
     advanced: "高级",
     advancedEmpty: "目前没有可用的高级设置。",
     save: "保存",
@@ -72,6 +73,26 @@ export default {
     update: "更新",
     deleteAccount: "删除账户",
     areYouSure: "确定吗？",
+  },
+  mcp: {
+    servers: "MCP 服务器",
+    serversDescription: "管理与 MCP 服务器的连接以集成 AI 工具",
+    addServer: "添加服务器",
+    editServer: "编辑服务器",
+    noServers: "未配置 MCP 服务器",
+    addFirstServer: "添加您的第一个 MCP 服务器",
+    serverUrl: "服务器 URL",
+    customHeaders: "自定义 Headers",
+    headerKey: "Header 键",
+    headerValue: "Header 值",
+    addHeader: "添加 Header",
+    testConnection: "测试连接",
+    connectionSuccess: "连接成功",
+    connectionFailed: "连接失败",
+    toolsAvailable: "{{count}} 个工具可用",
+    lastConnected: "最后连接：{{time}}",
+    enabledTools: "已启用工具",
+    discoveredTools: "发现 {{count}} 个工具",
   },
   common: {
     loading: "加载中...",
@@ -231,7 +252,7 @@ export default {
       english: "English",
       chinese: "中文",
     },
-    version: "v1.14.0", // Replace with the actual version number
+    version: "v1.14.1-dev", // Replace with the actual version number
   },
   mobileNav: {
     menu: "菜单",
