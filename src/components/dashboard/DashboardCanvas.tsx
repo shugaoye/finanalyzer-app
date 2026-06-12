@@ -11,6 +11,7 @@ import {
   getDashboard,
   getDashboards,
   updateDashboard,
+  updateWidget as updateWidgetApi,
   type Dashboard as ApiDashboard,
   type Widget as ApiWidget,
 } from "../../services/dashboardApi";
@@ -24,8 +25,10 @@ import {
   MarkdownWidget,
   MetricWidget,
   TableWidget,
+  TableSettingsModal,
   WidgetMenuModal,
 } from "../widgets";
+import type { TableSettings } from "../widgets/TableSettingsModal";
 import { NavigationBar } from "../widgets/NavigationBar";
 import "./DashboardCanvas.css";
 import { ParameterInput } from "./ParameterInput";
@@ -181,6 +184,8 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [customWidgets, setCustomWidgets] = useState<WidgetConfig[]>([]);
   const [groupConfigs, setGroupConfigs] = useState<Group[]>([]);
+  const [tableSettings, setTableSettings] = useState<Record<string, TableSettings>>({});
+  const [openTableSettingsWidgetId, setOpenTableSettingsWidgetId] = useState<string | null>(null);
 
   useEffect(() => {
     if (propId && propId !== activeId) {
@@ -218,6 +223,18 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
               h: widget.position.h,
             }));
             setLayout(rawLayout);
+            // 初始化tableSettings
+            const initialTableSettings: Record<string, TableSettings> = {};
+            w.forEach(widget => {
+              const savedConfig = (widget.data as Record<string, unknown>)?.tableConfig as Record<string, unknown> | undefined;
+              if (savedConfig) {
+                initialTableSettings[widget.id] = {
+                  decimalPlaces: savedConfig.decimalPlaces as number || 2,
+                  visibleColumns: (savedConfig.visibleColumns as string[]) || [],
+                };
+              }
+            });
+            setTableSettings(initialTableSettings);
           } else {
             setError("Dashboard not found");
           }
@@ -237,6 +254,18 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
               h: widget.position.h,
             }));
             setLayout(rawLayout);
+            // 初始化tableSettings
+            const initialTableSettings: Record<string, TableSettings> = {};
+            w.forEach(widget => {
+              const savedConfig = (widget.data as Record<string, unknown>)?.tableConfig as Record<string, unknown> | undefined;
+              if (savedConfig) {
+                initialTableSettings[widget.id] = {
+                  decimalPlaces: savedConfig.decimalPlaces as number || 2,
+                  visibleColumns: (savedConfig.visibleColumns as string[]) || [],
+                };
+              }
+            });
+            setTableSettings(initialTableSettings);
           }
         }
       } catch (e) {
@@ -850,7 +879,12 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
                             <div className="py-1">
                               <button
                                 className="widget-dropdown-item block px-4 py-2 text-sm w-full text-left"
-                                onClick={() => setOpenMenuWidgetId(null)}
+                                onClick={() => {
+                                  setOpenMenuWidgetId(null);
+                                  if (widget.type === "table") {
+                                    setOpenTableSettingsWidgetId(widget.id);
+                                  }
+                                }}
                               >
                                 Settings
                               </button>
@@ -956,6 +990,7 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
                                 error: widgetErrors[widget.id],
                               } as any
                             }
+                            settings={tableSettings[widget.id]}
                             mode={widgetDebugModes[widget.id] ? "debug" : undefined}
                             onUpdate={(params: Record<string, unknown>) => {
                               Object.entries(params).forEach(([paramName, value]) => {
@@ -1231,6 +1266,79 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
         widgets={[...widgetDefinitions, ...customWidgets]}
         loading={!widgetDefinitions.length && !customWidgets.length}
       />
+      {openTableSettingsWidgetId && (() => {
+        const widget = widgets.find(w => w.id === openTableSettingsWidgetId);
+        const columnDefs = (() => {
+          if (!widget) return [];
+          const widgetAny = widget as unknown as Record<string, unknown>;
+          
+          // Check path 1: widget.tableConfig.columnsDefs
+          const tableConfig = widgetAny.tableConfig as Record<string, unknown> | undefined;
+          if (tableConfig && tableConfig.columnsDefs) {
+            const columnsDefs = tableConfig.columnsDefs as Array<{ field: string; headerName?: string }>;
+            if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
+              return columnsDefs;
+            }
+          }
+          
+          // Check path 2: widget.data.data.table.columnsDefs
+          const widgetData = widgetAny.data as Record<string, unknown> | undefined;
+          if (widgetData) {
+            const tableDataObj = widgetData.data as Record<string, unknown> | undefined;
+            if (tableDataObj) {
+              const table = tableDataObj.table as Record<string, unknown> | undefined;
+              if (table && table.columnsDefs) {
+                const columnsDefs = table.columnsDefs as Array<{ field: string; headerName?: string }>;
+                if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
+                  return columnsDefs;
+                }
+              }
+            }
+            
+            // Check path 3: widget.data.columnsDefs
+            if (widgetData.columnsDefs) {
+              const columnsDefs = widgetData.columnsDefs as Array<{ field: string; headerName?: string }>;
+              if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
+                return columnsDefs;
+              }
+            }
+          }
+          
+          return [];
+        })();
+        // 从widget.data中读取已保存的配置
+        const savedConfig = (widget?.data as Record<string, unknown>)?.tableConfig as Record<string, unknown> | undefined;
+        const availableCols = columnDefs.map(c => c.field);
+        const currentSettings: TableSettings = {
+          decimalPlaces: savedConfig?.decimalPlaces as number || tableSettings[openTableSettingsWidgetId]?.decimalPlaces || 2,
+          visibleColumns: (savedConfig?.visibleColumns as string[]) || tableSettings[openTableSettingsWidgetId]?.visibleColumns || availableCols,
+        };
+        return (
+          <TableSettingsModal
+            isOpen={!!openTableSettingsWidgetId}
+            onClose={() => setOpenTableSettingsWidgetId(null)}
+            onSave={(settings) => {
+              // 更新前端状态
+              setTableSettings((prev) => ({
+                ...prev,
+                [openTableSettingsWidgetId!]: settings,
+              }));
+              // 调用API保存到后端
+              if (activeId && widget) {
+                const updatedData = {
+                  ...widget.data,
+                  tableConfig: settings,
+                };
+                updateWidgetApi(activeId, widget.id, { data: updatedData });
+              }
+              // 刷新widget以应用新设置
+              handleRefreshWidget(openTableSettingsWidgetId!);
+            }}
+            currentSettings={currentSettings}
+            columnDefs={columnDefs}
+          />
+        );
+      })()}
       <input
         ref={fileInputRef}
         type="file"

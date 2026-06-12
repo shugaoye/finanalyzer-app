@@ -454,6 +454,15 @@ export default {
     statusUnloaded: "Unloaded",
     statusError: "Error",
   },
+  tableSettings: {
+    title: "Table Settings",
+    decimalPlaces: "Decimal Places",
+    decimalPlacesDescription: "Number of decimal places to display for numeric values",
+    visibleColumns: "Visible Columns",
+    selectAll: "Select All",
+    deselectAll: "Deselect All",
+    visibleColumnsDescription: "At least one column must be visible",
+  },
   debugWidget: {
     definitionEditor: "Definition Editor",
     parametersAndData: "Parameters & Data",
