@@ -304,7 +304,12 @@ companionBridge.onCommandRequest = async (command) => {
   // Extract standard fields from command object
   // workspace-mcp sends params directly at top level:
   // { command, request_id, origin, backend_id, widget_id, data_args, ui_args, dashboard_id, ... }
-  const { command: cmd, request_id, ...args } = command as Record<string, unknown>;
+  const { command: cmd, request_id, ...rawArgs } = command as Record<string, unknown>;
+
+  // Strip null/undefined values to avoid downstream issues with null checks
+  const args = Object.fromEntries(
+    Object.entries(rawArgs).filter(([, v]) => v != null)
+  );
 
   const response = await commandHandler.handleCommand(
     sessionId,

@@ -437,7 +437,7 @@ export class CommandHandler {
       if (args.url !== undefined) {
         updates.url = args.url as string;
       }
-      if (args.endpoint_headers !== undefined) {
+      if (args.endpoint_headers != null) {
         updates.authentication = (args.endpoint_headers as Array<{ key: string; value: string; location: 'headers' | 'query' }>).map((header) => ({
           key: header.key,
           value: header.value,
