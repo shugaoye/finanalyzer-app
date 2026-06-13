@@ -4,6 +4,7 @@ import { snapshotGenerator } from './snapshotGenerator';
 import { dashboardService } from './dashboardService';
 import { widgetCRUDService } from './widgetCRUDService';
 import { widgetService } from '../widgets/widgetService';
+import { connectionService } from '../connections/connectionService';
 
 export type CommandType =
   | 'snapshot.get'
@@ -22,7 +23,8 @@ export type CommandType =
   | 'navigation.navigate'
   | 'navigation.tabs.add'
   | 'navigation.tabs.remove'
-  | 'navigation.tabs.rename';
+  | 'navigation.tabs.rename'
+  | 'manage_backends';
 
 export interface HandlerResult {
   success: boolean;
@@ -90,6 +92,8 @@ export class CommandHandler {
         return this.handleNavigationTabsRemove(args);
       case 'navigation.tabs.rename':
         return this.handleNavigationTabsRename(args);
+      case 'manage_backends':
+        return this.handleManageBackends(args);
       default:
         return { success: false, error: `Unknown command: ${command}` };
     }
@@ -319,6 +323,201 @@ export class CommandHandler {
       return { success: true, data: result };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Failed to rename tab' };
+    }
+  }
+
+  private async handleManageBackends(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const operation = args.operation as string;
+
+      if (!operation) {
+        return { success: false, error: 'operation is required' };
+      }
+
+      switch (operation) {
+        case 'list':
+          return this.handleManageBackendsList();
+        case 'add':
+          return this.handleManageBackendsAdd(args);
+        case 'update':
+          return this.handleManageBackendsUpdate(args);
+        case 'refresh':
+          return this.handleManageBackendsRefresh(args);
+        case 'remove':
+          return this.handleManageBackendsRemove(args);
+        default:
+          return { success: false, error: `Invalid operation: ${operation}. Must be one of: list, add, update, refresh, remove` };
+      }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to manage backends' };
+    }
+  }
+
+  private async handleManageBackendsList(): Promise<HandlerResult> {
+    try {
+      const connections = connectionService.getConnections();
+      
+      const result = connections.map((conn) => ({
+        id: conn.id,
+        name: conn.name,
+        url: conn.url,
+        status: conn.status,
+        widget_count: conn.metrics.widgets,
+        app_count: conn.metrics.apps,
+        agent_count: conn.metrics.agents,
+      }));
+      
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to list backends' };
+    }
+  }
+
+  private async handleManageBackendsAdd(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const name = args.name as string;
+      const url = args.url as string;
+      const endpointHeaders = args.endpoint_headers as Array<{ key: string; value: string; location: 'headers' | 'query' }> | undefined;
+      const validateWidgets = args.validate_widgets as boolean | undefined;
+
+      if (!name) {
+        return { success: false, error: 'name is required' };
+      }
+      if (!url) {
+        return { success: false, error: 'url is required' };
+      }
+
+      const authentication: Array<{ key: string; value: string; location: 'header' | 'query' }> = endpointHeaders?.map((header) => ({
+        key: header.key,
+        value: header.value,
+        location: (header.location === 'headers' ? 'header' : header.location) as 'header' | 'query',
+      })) || [];
+
+      const connection = connectionService.createConnection({
+        name,
+        url,
+        apiKey: '',
+        validateWidgets: validateWidgets !== false,
+        authentication,
+      });
+
+      if (validateWidgets !== false) {
+        await connectionService.testConnection(connection.id);
+      }
+
+      const result = {
+        id: connection.id,
+        name: connection.name,
+        url: connection.url,
+        status: connection.status,
+        widget_count: connection.metrics.widgets,
+        app_count: connection.metrics.apps,
+        agent_count: connection.metrics.agents,
+      };
+
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to add backend' };
+    }
+  }
+
+  private async handleManageBackendsUpdate(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const backendId = args.backend_id as string;
+
+      if (!backendId) {
+        return { success: false, error: 'backend_id is required' };
+      }
+
+      const updates: Record<string, unknown> = {};
+
+      if (args.name !== undefined) {
+        updates.name = args.name as string;
+      }
+      if (args.url !== undefined) {
+        updates.url = args.url as string;
+      }
+      if (args.endpoint_headers !== undefined) {
+        updates.authentication = (args.endpoint_headers as Array<{ key: string; value: string; location: 'headers' | 'query' }>).map((header) => ({
+          key: header.key,
+          value: header.value,
+          location: (header.location === 'headers' ? 'header' : header.location) as 'header' | 'query',
+        }));
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return { success: false, error: 'At least one update field is required (name, url, or endpoint_headers)' };
+      }
+
+      const connection = connectionService.updateConnection(backendId, updates as any);
+
+      if (!connection) {
+        return { success: false, error: `Backend not found: ${backendId}` };
+      }
+
+      const result = {
+        id: connection.id,
+        name: connection.name,
+        url: connection.url,
+        status: connection.status,
+        widget_count: connection.metrics.widgets,
+        app_count: connection.metrics.apps,
+        agent_count: connection.metrics.agents,
+      };
+
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update backend' };
+    }
+  }
+
+  private async handleManageBackendsRefresh(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const backendId = args.backend_id as string;
+
+      if (!backendId) {
+        return { success: false, error: 'backend_id is required' };
+      }
+
+      const connection = await connectionService.refreshConnection(backendId);
+
+      if (!connection) {
+        return { success: false, error: `Backend not found: ${backendId}` };
+      }
+
+      const result = {
+        id: connection.id,
+        name: connection.name,
+        url: connection.url,
+        status: connection.status,
+        widget_count: connection.metrics.widgets,
+        app_count: connection.metrics.apps,
+        agent_count: connection.metrics.agents,
+      };
+
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to refresh backend' };
+    }
+  }
+
+  private async handleManageBackendsRemove(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const backendId = args.backend_id as string;
+
+      if (!backendId) {
+        return { success: false, error: 'backend_id is required' };
+      }
+
+      const deleted = connectionService.deleteConnection(backendId);
+
+      if (!deleted) {
+        return { success: false, error: `Backend not found: ${backendId}` };
+      }
+
+      return { success: true, data: { deleted: true } };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to remove backend' };
     }
   }
 }
