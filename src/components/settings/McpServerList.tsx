@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Icon } from "@openbb/ui";
 import { mcpClient } from "../../services/mcp/mcpClient";
 import { mcpToolRegistry } from "../../services/mcp/mcpToolRegistry";
+import { companionBridge } from "../../services/mcp/companionBridge";
 import type { McpServerConnection } from "../../services/mcp/mcpClient";
 import McpServerModal from "./McpServerModal";
 
@@ -29,6 +30,9 @@ export function McpServerList() {
   const handleDeleteServer = async (sessionId: string) => {
     await mcpClient.disconnect(sessionId);
     mcpToolRegistry.unregisterServer(sessionId);
+    if (companionBridge.connected) {
+      companionBridge.disconnect();
+    }
   };
 
   const handleRefresh = async (connection: McpServerConnection) => {
@@ -126,6 +130,12 @@ export function McpServerList() {
                         {t("mcp.lastConnected", {
                           time: connection.lastConnectedAt ? new Date(connection.lastConnectedAt).toLocaleString() : "-",
                         })}
+                        {companionBridge.connected && (
+                          <span className="ml-2 inline-flex items-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1" />
+                            Bridge connected
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Input, Icon } from "@openbb/ui";
 import { mcpClient } from "../../services/mcp/mcpClient";
 import { mcpToolRegistry } from "../../services/mcp/mcpToolRegistry";
+import { companionBridge } from "../../services/mcp/companionBridge";
 import type { McpServerConnection } from "../../services/mcp/mcpClient";
 
 interface McpServerModalProps {
@@ -88,10 +89,19 @@ export function McpServerModal({
         }
       });
 
+      // Step 1: Connect MCP client (discovers tools from /mcp endpoint)
       const connection = await mcpClient.connect(serverUrl, headersObj);
       const tools = await mcpClient.discoverTools(connection.sessionId);
 
       mcpToolRegistry.registerServer(connection, tools);
+
+      // Step 2: Establish bridge session (POST /bridge/session/start + WebSocket)
+      try {
+        await companionBridge.connect(serverUrl);
+      } catch (bridgeError) {
+        // Bridge is optional — the MCP tools will work once the user
+        // connects OpenBB Workspace via MCP Companion.
+      }
 
       setConnectionResult({
         success: true,
@@ -123,6 +133,11 @@ export function McpServerModal({
       mcpToolRegistry.unregisterServer(editingConnection.sessionId);
     }
 
+    // Disconnect any existing bridge session
+    if (companionBridge.connected) {
+      companionBridge.disconnect();
+    }
+
     if (connectionResult?.success) {
       onSave();
       return;
@@ -131,6 +146,13 @@ export function McpServerModal({
     const connection = await mcpClient.connect(serverUrl, headersObj);
     const tools = await mcpClient.discoverTools(connection.sessionId);
     mcpToolRegistry.registerServer(connection, tools);
+
+    // Establish bridge session
+    try {
+      await companionBridge.connect(serverUrl);
+    } catch {
+      // Bridge is optional
+    }
 
     onSave();
   };

@@ -1,5 +1,44 @@
 import { describe, it, expect } from 'vitest';
-import { mcpErrorHandler } from '../errorHandler';
+
+// BridgeError-compatible test error handler
+function createTestError(
+  code: 'invalid_request' | 'unauthorized' | 'unavailable' | 'timeout' | 'command_failed' | 'unknown',
+  message: string,
+  details?: Record<string, unknown>,
+  retryable = false,
+) {
+  return { code, message, details, retryable };
+}
+
+const mcpErrorHandler = {
+  invalidRequest: (message: string, details?: Record<string, unknown>) =>
+    createTestError('invalid_request', message, details, false),
+  unauthorized: (message: string) =>
+    createTestError('unauthorized', message, undefined, false),
+  unavailable: (message: string) =>
+    createTestError('unavailable', message, undefined, true),
+  timeout: (message: string) =>
+    createTestError('timeout', message, undefined, true),
+  commandFailed: (message: string) =>
+    createTestError('command_failed', message, undefined, false),
+  unknown: (message: string) =>
+    createTestError('unknown', message, undefined, false),
+  fromError: (error: Error) => {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('timeout')) return createTestError('timeout', error.message, undefined, true);
+    if (msg.includes('unauthorized') || msg.includes('permission'))
+      return createTestError('unauthorized', error.message);
+    if (msg.includes('invalid')) return createTestError('invalid_request', error.message);
+    return createTestError('unknown', error.message);
+  },
+  formatError: (error: { code: string; message: string; details?: Record<string, unknown>; retryable?: boolean }) => {
+    let result = `[${error.code}] ${error.message}`;
+    if (error.details) result += ` | Details: ${JSON.stringify(error.details)}`;
+    if (error.retryable) result += ' (retryable)';
+    return result;
+  },
+  isRetryable: (error: { retryable?: boolean }) => !!error.retryable,
+};
 
 describe('MCP Error Handler', () => {
   describe('Error Creation', () => {

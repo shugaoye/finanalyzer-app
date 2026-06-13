@@ -1,67 +1,119 @@
-import type { BridgeError, BridgeErrorCode } from '../../types/mcp/models';
+export type McpErrorCode =
+  | 'invalid_request'
+  | 'invalid_parameter'
+  | 'not_found'
+  | 'permission_denied'
+  | 'internal_error'
+  | 'service_unavailable'
+  | 'timeout'
+  | 'rate_limit_exceeded'
+  | 'not_implemented'
+  | 'validation_failed';
+
+export interface McpError {
+  code: McpErrorCode;
+  message: string;
+  details?: Record<string, unknown>;
+  requestId?: string;
+}
+
+export interface ErrorResponse {
+  jsonrpc: string;
+  id: string | null;
+  error: McpError;
+}
 
 export class McpErrorHandler {
-  createError(code: BridgeErrorCode, message: string, details?: Record<string, unknown>, retryable = false): BridgeError {
+  private requestId: string;
+
+  constructor(requestId?: string) {
+    this.requestId = requestId || 'unknown';
+  }
+
+  createError(code: McpErrorCode, message: string, details?: Record<string, unknown>): ErrorResponse {
     return {
-      code,
-      message,
-      details,
-      retryable,
+      jsonrpc: '2.0',
+      id: this.requestId,
+      error: {
+        code,
+        message,
+        details,
+        requestId: this.requestId,
+      },
     };
   }
 
-  invalidRequest(message: string, details?: Record<string, unknown>): BridgeError {
-    return this.createError('invalid_request', message, details, false);
+  handleInvalidRequest(message?: string): ErrorResponse {
+    return this.createError('invalid_request', message || 'Invalid request');
   }
 
-  unauthorized(message: string, details?: Record<string, unknown>): BridgeError {
-    return this.createError('unauthorized', message, details, false);
+  handleInvalidParameter(parameter: string, reason?: string): ErrorResponse {
+    return this.createError('invalid_parameter', `Invalid parameter: ${parameter}`, { parameter, reason });
   }
 
-  unavailable(message: string, details?: Record<string, unknown>): BridgeError {
-    return this.createError('unavailable', message, details, true);
+  handleNotFound(resource: string, identifier?: string): ErrorResponse {
+    const message = identifier ? `${resource} not found: ${identifier}` : `${resource} not found`;
+    return this.createError('not_found', message, { resource, identifier });
   }
 
-  timeout(message: string, details?: Record<string, unknown>): BridgeError {
-    return this.createError('timeout', message, details, true);
+  handlePermissionDenied(message?: string): ErrorResponse {
+    return this.createError('permission_denied', message || 'Permission denied');
   }
 
-  commandFailed(message: string, details?: Record<string, unknown>): BridgeError {
-    return this.createError('command_failed', message, details, false);
+  handleInternalError(error: Error): ErrorResponse {
+    console.error('Internal error:', error);
+    return this.createError('internal_error', 'Internal server error', {
+      stack: error.stack,
+      name: error.name,
+    });
   }
 
-  unknown(message: string, details?: Record<string, unknown>): BridgeError {
-    return this.createError('unknown', message, details, false);
+  handleServiceUnavailable(message?: string): ErrorResponse {
+    return this.createError('service_unavailable', message || 'Service unavailable');
   }
 
-  fromError(error: Error): BridgeError {
-    const message = error.message.toLowerCase();
-    if (message.includes('timeout')) {
-      return this.timeout(error.message);
+  handleTimeout(message?: string): ErrorResponse {
+    return this.createError('timeout', message || 'Request timeout');
+  }
+
+  handleRateLimitExceeded(retryAfter?: number): ErrorResponse {
+    const details: Record<string, unknown> = {};
+    if (retryAfter !== undefined) {
+      details.retryAfter = retryAfter;
     }
-    if (message.includes('unauthorized') || message.includes('permission')) {
-      return this.unauthorized(error.message);
-    }
-    if (message.includes('invalid')) {
-      return this.invalidRequest(error.message);
-    }
-    return this.unknown(error.message);
+    return this.createError('rate_limit_exceeded', 'Rate limit exceeded', details);
   }
 
-  formatError(error: BridgeError): string {
-    const parts = [`[${error.code}] ${error.message}`];
-    if (error.details) {
-      parts.push(`Details: ${JSON.stringify(error.details)}`);
-    }
-    if (error.retryable) {
-      parts.push('(retryable)');
-    }
-    return parts.join(' ');
+  handleNotImplemented(method?: string): ErrorResponse {
+    const message = method ? `Method not implemented: ${method}` : 'Method not implemented';
+    return this.createError('not_implemented', message, { method });
   }
 
-  isRetryable(error: BridgeError): boolean {
-    return error.retryable;
+  handleValidationFailed(errors: Record<string, string>): ErrorResponse {
+    return this.createError('validation_failed', 'Validation failed', { errors });
+  }
+
+  wrapError(error: unknown): ErrorResponse {
+    if (error instanceof Error) {
+      if (error.message.includes('not found')) {
+        return this.handleNotFound('resource');
+      }
+      if (error.message.includes('timeout')) {
+        return this.handleTimeout();
+      }
+      if (error.message.includes('permission')) {
+        return this.handlePermissionDenied();
+      }
+      return this.handleInternalError(error);
+    }
+    return this.handleInternalError(new Error(String(error)));
+  }
+
+  setRequestId(requestId: string): void {
+    this.requestId = requestId;
   }
 }
 
-export const mcpErrorHandler = new McpErrorHandler();
+export function createErrorHandler(requestId?: string): McpErrorHandler {
+  return new McpErrorHandler(requestId);
+}

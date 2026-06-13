@@ -1,7 +1,18 @@
 import { mcpProtocol } from './mcpProtocol';
-import { mcpErrorHandler } from './errorHandler';
 import type { ToolResponse } from './responseFormatter';
 import { responseFormatter } from './responseFormatter';
+
+// BridgeError-compatible error adapter
+function fromMcpError(error: unknown): { code: 'command_failed' | 'unknown'; message: string; retryable: false } {
+  if (error instanceof Error) {
+    return { code: 'command_failed', message: error.message, retryable: false };
+  }
+  return { code: 'unknown', message: String(error), retryable: false };
+}
+
+function unauthorizedError(message: string): { code: 'unauthorized'; message: string; retryable: false } {
+  return { code: 'unauthorized', message, retryable: false };
+}
 
 export interface McpServerConnection {
   serverUrl: string;
@@ -105,14 +116,14 @@ export class McpClient {
       this.tools.set(sessionId, tools);
       return tools;
     } catch (error) {
-      throw mcpErrorHandler.fromError(error as Error);
+      throw fromMcpError(error);
     }
   }
 
   async callTool(sessionId: string, toolName: string, arguments_: Record<string, unknown>): Promise<ToolResponse> {
     const connection = this.connections.get(sessionId);
     if (!connection || !connection.connected) {
-      return responseFormatter.error(toolName, sessionId, mcpErrorHandler.unauthorized('Not connected'));
+      return responseFormatter.error(toolName, sessionId, unauthorizedError('Not connected'));
     }
 
     try {
@@ -121,14 +132,12 @@ export class McpClient {
       const result = JSON.parse(response);
 
       if (result.error) {
-        const bridgeError = mcpErrorHandler.fromError(new Error(result.error.message));
-        return responseFormatter.error(toolName, result.id || null, bridgeError);
+        return responseFormatter.error(toolName, result.id || null, fromMcpError(new Error(result.error.message)));
       }
 
       return responseFormatter.success(toolName, result.id || null, 'Success', result.result);
     } catch (error) {
-      const bridgeError = mcpErrorHandler.fromError(error as Error);
-      return responseFormatter.error(toolName, sessionId, bridgeError);
+      return responseFormatter.error(toolName, sessionId, fromMcpError(error));
     }
   }
 
