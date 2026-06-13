@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { companionBridge, type BridgeConnectionStatus } from "../../services/mcp/companionBridge";
 
 export function SettingsPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("general");
   const [theme, setTheme] = useState("dark");
-  const [companionEnabled, setCompanionEnabled] = useState(false);
-  const [sidecarUrl, setSidecarUrl] = useState("http://localhost:8787");
-  const [connectionStatus, setConnectionStatus] = useState<BridgeConnectionStatus>("disconnected");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -16,86 +12,12 @@ export function SettingsPage() {
       setTheme(savedTheme);
       document.documentElement.classList.toggle("dark", savedTheme === "dark");
     }
-
-    const savedCompanionEnabled = localStorage.getItem("companionEnabled") === "true";
-    setCompanionEnabled(savedCompanionEnabled);
-
-    const savedSidecarUrl = localStorage.getItem("sidecarUrl");
-    if (savedSidecarUrl) {
-      setSidecarUrl(savedSidecarUrl);
-    }
-
-    const unsubscribe = companionBridge.subscribe((event) => {
-      if (event.type === "connected") {
-        setConnectionStatus("connected");
-      } else if (event.type === "disconnected") {
-        setConnectionStatus("disconnected");
-      } else if (event.type === "connecting") {
-        setConnectionStatus("connecting");
-      } else if (event.type === "error") {
-        setConnectionStatus("error");
-      }
-    });
-
-    return () => unsubscribe();
   }, []);
 
   const handleThemeChange = (newTheme: string) => {
     setTheme(newTheme);
     document.documentElement.classList.toggle("dark", newTheme === "dark");
     localStorage.setItem("theme", newTheme);
-  };
-
-  const handleCompanionToggle = () => {
-    const newValue = !companionEnabled;
-    setCompanionEnabled(newValue);
-    localStorage.setItem("companionEnabled", newValue.toString());
-
-    if (newValue) {
-      companionBridge.connect(sidecarUrl).catch(() => {
-        // Connection error will be handled via subscribe
-      });
-    } else {
-      companionBridge.disconnect();
-    }
-  };
-
-  const handleSidecarUrlChange = (url: string) => {
-    setSidecarUrl(url);
-    localStorage.setItem("sidecarUrl", url);
-  };
-
-  const getStatusIndicator = () => {
-    switch (connectionStatus) {
-      case "connected":
-        return (
-          <span className="inline-flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            <span className="text-green-500 text-sm">{t("settings.companionConnected")}</span>
-          </span>
-        );
-      case "connecting":
-        return (
-          <span className="inline-flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-            <span className="text-yellow-500 text-sm">{t("settings.companionConnecting")}</span>
-          </span>
-        );
-      case "error":
-        return (
-          <span className="inline-flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500"></span>
-            <span className="text-red-500 text-sm">{t("settings.companionError")}</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-            <span className="text-gray-400 text-sm">{t("settings.companionDisconnected")}</span>
-          </span>
-        );
-    }
   };
 
   return (

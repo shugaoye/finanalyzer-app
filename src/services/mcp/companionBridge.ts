@@ -300,9 +300,15 @@ export const companionBridge = new CompanionBridge();
 /** Connect commandHandler to handle incoming MCP commands */
 companionBridge.onCommandRequest = async (command) => {
   const sessionId = companionBridge.session?.sessionId || '';
+
+  // Extract standard fields from command object
+  // workspace-mcp sends params directly at top level:
+  // { command, request_id, origin, backend_id, widget_id, data_args, ui_args, dashboard_id, ... }
+  const { command: cmd, request_id, ...args } = command as Record<string, unknown>;
+
   const response = await commandHandler.handleCommand(
     sessionId,
-    command as { id: string; command: string; args?: Record<string, unknown> }
+    { id: request_id as string || '', command: cmd as string, args }
   );
 
   if (!response.ok) {

@@ -3,10 +3,13 @@ import { sessionManager } from './sessionManager';
 import { snapshotGenerator } from './snapshotGenerator';
 import { dashboardService } from './dashboardService';
 import { widgetCRUDService } from './widgetCRUDService';
+import { widgetService } from '../widgets/widgetService';
 
 export type CommandType =
   | 'snapshot.get'
   | 'get_workspace_snapshot'
+  | 'list_available_widgets'
+  | 'get_widget_schema'
   | 'dashboard.create'
   | 'dashboard.read'
   | 'dashboard.update'
@@ -57,6 +60,10 @@ export class CommandHandler {
       case 'snapshot.get':
       case 'get_workspace_snapshot':
         return this.handleSnapshotGet(args);
+      case 'list_available_widgets':
+        return this.handleListAvailableWidgets(args);
+      case 'get_widget_schema':
+        return this.handleGetWidgetSchema(args);
       case 'dashboard.create':
         return this.handleDashboardCreate(args);
       case 'dashboard.read':
@@ -94,6 +101,74 @@ export class CommandHandler {
       return { success: true, data: snapshot };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Failed to generate snapshot' };
+    }
+  }
+
+  private async handleListAvailableWidgets(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const origin = args.origin as string | undefined;
+      const backendId = args.backend_id as string | undefined;
+      
+      const widgets = await widgetService.getWidgets();
+      
+      let filteredWidgets = widgets;
+      
+      // Filter by origin if provided (supports empty string filtering)
+      if (origin !== undefined && origin !== null) {
+        filteredWidgets = filteredWidgets.filter((w) => w.source === origin);
+      }
+      
+      // Filter by backend_id if provided
+      if (backendId !== undefined && backendId !== null) {
+        filteredWidgets = filteredWidgets.filter((w) => w.connectionId === backendId);
+      }
+      
+      const result = filteredWidgets.map((widget) => ({
+        origin: widget.source || '',
+        widget_id: widget.id,
+        name: widget.name,
+        description: widget.description,
+        category: widget.category,
+      }));
+      
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to list available widgets' };
+    }
+  }
+
+  private async handleGetWidgetSchema(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      if (typeof args.origin !== 'string') {
+        return { success: false, error: 'origin must be a string' };
+      }
+      if (typeof args.widget_id !== 'string') {
+        return { success: false, error: 'widget_id must be a string' };
+      }
+      
+      const origin = args.origin;
+      const widgetId = args.widget_id;
+      
+      const widgets = await widgetService.getWidgets();
+      const widget = widgets.find((w) => w.source === origin && w.id === widgetId);
+      
+      if (!widget) {
+        return { success: false, error: `Widget not found: ${origin}/${widgetId}` };
+      }
+      
+      const schema = {
+        origin: widget.source,
+        widget_id: widget.id,
+        name: widget.name,
+        description: widget.description,
+        category: widget.category,
+        params: widget.params || [],
+        grid_data: widget.gridData || { w: 4, h: 3 },
+      };
+      
+      return { success: true, data: schema };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to get widget schema' };
     }
   }
 
