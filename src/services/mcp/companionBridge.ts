@@ -308,6 +308,12 @@ companionBridge.onCommandRequest = async (command) => {
   // - get_params_options: { command, request_id, param_options_queries: [{ ... }] }
   const { command: cmd, request_id, ...rawArgs } = command as Record<string, unknown>;
 
+  // Map workspace-mcp command names to commandHandler expected names
+  const commandNameMap: Record<string, string> = {
+    'update_dashboard_layout': 'update_widget_layout',
+  };
+  const mappedCmd = commandNameMap[cmd as string] || (cmd as string);
+
   // Handle data_sources array (used by get_widget_data)
   // Extract first element's fields as top-level args
   // workspace-mcp transforms fields: widget_id -> id, data_args -> input_args
@@ -341,11 +347,32 @@ companionBridge.onCommandRequest = async (command) => {
     args = Object.fromEntries(
       Object.entries(rawArgs).filter(([, v]) => v != null)
     );
+
+    // Map workspace-mcp field names to commandHandler expected names:
+    // - backend_name → origin (create_widget, update_widget, read_widget, get_widget_schema, get_widget_data)
+    // - config.data_args → data_args (create_widget, update_widget)
+    // - config.ui_args → ui_args (create_widget, update_widget)
+    if (args.backend_name !== undefined) {
+      args.origin = args.backend_name;
+      delete args.backend_name;
+    }
+
+    // Unwrap config.data_args and config.ui_args for create_widget / update_widget
+    if (args.config && typeof args.config === 'object') {
+      const config = args.config as Record<string, unknown>;
+      if (config.data_args !== undefined && config.data_args !== null) {
+        args.data_args = config.data_args;
+      }
+      if (config.ui_args !== undefined && config.ui_args !== null) {
+        args.ui_args = config.ui_args;
+      }
+      delete args.config;
+    }
   }
 
   const response = await commandHandler.handleCommand(
     sessionId,
-    { id: request_id as string || '', command: cmd as string, args }
+    { id: request_id as string || '', command: mappedCmd, args }
   );
 
   if (!response.ok) {

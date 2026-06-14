@@ -98,7 +98,13 @@ export class AppsService {
     appId: string,
     name?: string,
   ): Promise<AppInstance | undefined> {
-    const template = this.templates.get(appId);
+    // First try direct ID lookup, then fallback to name search
+    let template = this.templates.get(appId);
+    if (!template) {
+      template = Array.from(this.templates.values()).find(
+        (app) => app.name.toLowerCase() === appId.toLowerCase(),
+      );
+    }
     if (!template) {
       return undefined;
     }
