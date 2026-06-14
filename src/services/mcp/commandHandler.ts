@@ -788,6 +788,7 @@ export class CommandHandler {
       const name = args.name as string | undefined;
       const description = args.description as string | undefined;
       const chartParams = args.chart_params as Record<string, unknown> | undefined;
+      const innerTab = args.inner_tab as string | undefined;
 
       const allowedTypes = ['note', 'table', 'chart', 'html'];
       if (!widgetType || !allowedTypes.includes(widgetType)) {
@@ -806,8 +807,32 @@ export class CommandHandler {
         return { success: false, error: `data must be an array for ${widgetType} widget_type` };
       }
 
-      if (widgetType === 'chart' && !chartParams) {
-        return { success: false, error: 'chart widget_type requires chart_params' };
+      if (widgetType === 'chart') {
+        if (!chartParams) {
+          return { success: false, error: 'chart widget_type requires chart_params with chartType, xKey, and non-empty yKey' };
+        }
+        if (typeof chartParams.chartType !== 'string' || !chartParams.chartType) {
+          return { success: false, error: 'chart_params.chartType must be a non-empty string' };
+        }
+        if (typeof chartParams.xKey !== 'string' || !chartParams.xKey) {
+          return { success: false, error: 'chart_params.xKey must be a non-empty string' };
+        }
+        const yKey = chartParams.yKey;
+        if (!Array.isArray(yKey) || yKey.length === 0) {
+          return { success: false, error: 'chart_params.yKey must be a non-empty array' };
+        }
+      }
+
+      // Validate inner_tab exists in the dashboard if provided
+      if (innerTab && dashboardId) {
+        const dashboard = await dashboardService.getDashboardInfo(dashboardId);
+        if (!dashboard) {
+          return { success: false, error: `Dashboard not found: ${dashboardId}` };
+        }
+        const tabExists = dashboard.tabIds?.includes(innerTab);
+        if (!tabExists) {
+          return { success: false, error: `Tab not found: ${innerTab} in dashboard ${dashboardId}` };
+        }
       }
 
       const widgetData = {
@@ -817,6 +842,7 @@ export class CommandHandler {
         description: description || '',
         data,
         chartParams,
+        innerTab,
         position: { x: 0, y: 0 },
       };
 
