@@ -104,6 +104,8 @@ export class WidgetCRUDService {
       position: {
         x: layout.x as number,
         y: layout.y as number,
+        w: layout.w as number,
+        h: layout.h as number,
       },
     });
 
