@@ -1109,22 +1109,111 @@ export class CommandHandler {
         return { success: false, error: 'task_requests is required' };
       }
 
+      const connections = connectionService.getConnections();
+      const connectedConnections = connections.filter((c) => c.status === 'connected');
+
       const results: Array<Record<string, unknown>> = [];
       for (const task of taskRequests) {
         if (!task.id || !task.description) {
           return { success: false, error: 'Each task must have id and description' };
         }
 
+        const assignedHolderUrl = task.assigned_holder_url as string | undefined;
+        const assignedAgentId = task.assigned_agent_id as string | undefined;
+
+        // Validate assigned_holder_url: must match a configured connection
+        if (assignedHolderUrl) {
+          const normalizedTaskUrl = assignedHolderUrl.replace(/\/+$/, '');
+          const matchingConn = connections.find(
+            (conn) => conn.url && conn.url.replace(/\/+$/, '') === normalizedTaskUrl,
+          );
+
+          if (!matchingConn) {
+            return {
+              success: false,
+              error: `Backend not found for assigned_holder_url: ${assignedHolderUrl}`,
+            };
+          }
+
+          // If assigned_agent_id is also provided, validate it exists on the backend
+          if (assignedAgentId) {
+            const baseUrl = matchingConn.url.replace(/\/+$/, '');
+            try {
+              const agentsUrl = `${baseUrl}/agents.json`;
+              const response = await fetch(agentsUrl);
+
+              if (!response.ok) {
+                return {
+                  success: false,
+                  error: `No agents available at backend: ${assignedHolderUrl}`,
+                };
+              }
+
+              const agentsData = await response.json();
+              if (!agentsData || typeof agentsData !== 'object' || !agentsData[assignedAgentId]) {
+                return {
+                  success: false,
+                  error: `assigned_agent_id not found: ${assignedAgentId} at backend: ${assignedHolderUrl}`,
+                };
+              }
+            } catch {
+              return {
+                success: false,
+                error: `Failed to verify agent at backend: ${assignedHolderUrl}`,
+              };
+            }
+          }
+        } else if (assignedAgentId) {
+          // No holder URL specified, check all connected backends for the agent
+          if (connectedConnections.length === 0) {
+            return {
+              success: false,
+              error: 'No connected backends available to assign task',
+            };
+          }
+
+          let agentFound = false;
+          for (const conn of connectedConnections) {
+            if (!conn.url) continue;
+            try {
+              const baseUrl = conn.url.replace(/\/+$/, '');
+              const agentsUrl = `${baseUrl}/agents.json`;
+              const response = await fetch(agentsUrl);
+              if (response.ok) {
+                const agentsData = await response.json();
+                if (agentsData && typeof agentsData === 'object' && agentsData[assignedAgentId]) {
+                  agentFound = true;
+                  break;
+                }
+              }
+            } catch {
+              // Try next connection
+            }
+          }
+
+          if (!agentFound) {
+            return {
+              success: false,
+              error: `assigned_agent_id not found on any connected backend: ${assignedAgentId}`,
+            };
+          }
+        }
+
         results.push({
           id: task.id,
           status: 'assigned',
           message: 'Task assigned successfully',
+          assigned_holder_url: assignedHolderUrl || null,
+          assigned_agent_id: assignedAgentId || null,
         });
       }
 
       return { success: true, data: { tasks: results } };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to assign tasks to agents' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to assign tasks to agents',
+      };
     }
   }
 
@@ -1137,13 +1226,36 @@ export class CommandHandler {
         return { success: false, error: 'slug is required' };
       }
 
+      const availableSkills: Record<string, { title: string; description: string; content: string }> = {
+        'stock-analyzer': {
+          title: 'Stock Analyzer',
+          description: 'Analyze stock fundamentals, technicals, and market sentiment',
+          content: '# Stock Analyzer Skill\n\nA comprehensive stock analysis skill that evaluates company fundamentals, technical indicators, and market conditions.\n\n## Capabilities\n- Fundamental analysis\n- Technical analysis\n- Market sentiment evaluation\n- Risk assessment',
+        },
+        'portfolio-manager': {
+          title: 'Portfolio Manager',
+          description: 'Manage investment portfolios with rebalancing and risk tracking',
+          content: '# Portfolio Manager Skill\n\nTracks portfolio performance, suggests rebalancing, and monitors risk exposure.\n\n## Capabilities\n- Portfolio tracking\n- Rebalancing suggestions\n- Risk monitoring\n- Performance attribution',
+        },
+        'market-reporter': {
+          title: 'Market Reporter',
+          description: 'Generate market reports and summaries',
+          content: '# Market Reporter Skill\n\nGenerates comprehensive market reports with key metrics and insights.\n\n## Capabilities\n- Market overview generation\n- Sector analysis\n- News summarization\n- Trend identification',
+        },
+      };
+
+      const skill = availableSkills[slug];
+      if (!skill) {
+        return { success: false, error: `Skill not found: ${slug}` };
+      }
+
       const skillContent = {
         slug,
         reason,
-        content: `Skill content for ${slug}`,
+        content: skill.content,
         metadata: {
-          title: `Skill: ${slug}`,
-          description: `Description for ${slug}`,
+          title: skill.title,
+          description: skill.description,
         },
       };
 
