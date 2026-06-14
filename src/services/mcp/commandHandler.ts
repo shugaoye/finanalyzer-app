@@ -1019,6 +1019,13 @@ export class CommandHandler {
         return { success: false, error: 'backend_id is required' };
       }
 
+      // Validate backend_id exists
+      const connections = connectionService.getConnections();
+      const backendExists = connections.some((conn) => conn.id === backendId);
+      if (!backendExists) {
+        return { success: false, error: `Backend not found: ${backendId}` };
+      }
+
       switch (operation) {
         case 'list': {
           const apps = appsService.listApps().map((app) => ({

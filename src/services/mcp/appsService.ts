@@ -84,7 +84,14 @@ export class AppsService {
   }
 
   getAppDefinition(appId: string): AppTemplate | undefined {
-    return this.templates.get(appId);
+    // First try direct ID lookup
+    const byId = this.templates.get(appId);
+    if (byId) return byId;
+
+    // Fallback: search by name (case-insensitive)
+    return Array.from(this.templates.values()).find(
+      (app) => app.name.toLowerCase() === appId.toLowerCase(),
+    );
   }
 
   async instantiateApp(
