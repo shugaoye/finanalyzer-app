@@ -887,6 +887,9 @@ export class CommandHandler {
           }
 
           const dashboard = await dashboardService.getDashboardInfo(dashboardId);
+          if (!dashboard) {
+            return { success: false, error: 'Dashboard not found' };
+          }
           return { success: true, data: dashboard };
         }
         case 'update': {
