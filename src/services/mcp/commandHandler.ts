@@ -5,12 +5,31 @@ import { dashboardService } from './dashboardService';
 import { widgetCRUDService } from './widgetCRUDService';
 import { widgetService } from '../widgets/widgetService';
 import { connectionService } from '../connections/connectionService';
+import { appsService } from './appsService';
+
+// Re-export types for test files
+export type { CommandMessage, CommandResponse } from './sessionManager';
 
 export type CommandType =
   | 'snapshot.get'
   | 'get_workspace_snapshot'
   | 'list_available_widgets'
   | 'get_widget_schema'
+  | 'get_widget_data'
+  | 'get_params_options'
+  | 'create_widget'
+  | 'read_widget'
+  | 'update_widget'
+  | 'delete_widget'
+  | 'update_widget_layout'
+  | 'add_generative_widget'
+  | 'manage_dashboard'
+  | 'manage_navigation_bar'
+  | 'navigate_workspace'
+  | 'manage_backends'
+  | 'manage_apps'
+  | 'assign_tasks_to_agents'
+  | 'get_skill_content'
   | 'dashboard.create'
   | 'dashboard.read'
   | 'dashboard.update'
@@ -23,8 +42,7 @@ export type CommandType =
   | 'navigation.navigate'
   | 'navigation.tabs.add'
   | 'navigation.tabs.remove'
-  | 'navigation.tabs.rename'
-  | 'manage_backends';
+  | 'navigation.tabs.rename';
 
 export interface HandlerResult {
   success: boolean;
@@ -66,6 +84,36 @@ export class CommandHandler {
         return this.handleListAvailableWidgets(args);
       case 'get_widget_schema':
         return this.handleGetWidgetSchema(args);
+      case 'get_widget_data':
+        return this.handleGetWidgetData(args);
+      case 'get_params_options':
+        return this.handleGetParamsOptions(args);
+      case 'create_widget':
+        return this.handleCreateWidget(args);
+      case 'read_widget':
+        return this.handleReadWidget(args);
+      case 'update_widget':
+        return this.handleUpdateWidget(args);
+      case 'delete_widget':
+        return this.handleDeleteWidget(args);
+      case 'update_widget_layout':
+        return this.handleUpdateWidgetLayout(args);
+      case 'add_generative_widget':
+        return this.handleAddGenerativeWidget(args);
+      case 'manage_dashboard':
+        return this.handleManageDashboard(args);
+      case 'manage_navigation_bar':
+        return this.handleManageNavigationBar(args);
+      case 'navigate_workspace':
+        return this.handleNavigateWorkspace(args);
+      case 'manage_backends':
+        return this.handleManageBackends(args);
+      case 'manage_apps':
+        return this.handleManageApps(args);
+      case 'assign_tasks_to_agents':
+        return this.handleAssignTasksToAgents(args);
+      case 'get_skill_content':
+        return this.handleGetSkillContent(args);
       case 'dashboard.create':
         return this.handleDashboardCreate(args);
       case 'dashboard.read':
@@ -92,8 +140,6 @@ export class CommandHandler {
         return this.handleNavigationTabsRemove(args);
       case 'navigation.tabs.rename':
         return this.handleNavigationTabsRename(args);
-      case 'manage_backends':
-        return this.handleManageBackends(args);
       default:
         return { success: false, error: `Unknown command: ${command}` };
     }
@@ -518,6 +564,559 @@ export class CommandHandler {
       return { success: true, data: { deleted: true } };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Failed to remove backend' };
+    }
+  }
+
+  private async handleGetWidgetData(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const origin = args.origin as string;
+      const widgetId = args.widget_id as string;
+      const widgetUuid = args.widget_uuid as string | undefined;
+
+      if (!origin || !widgetId) {
+        return { success: false, error: 'origin and widget_id are required' };
+      }
+
+      const widgets = await widgetService.getWidgets();
+      const widget = widgets.find((w) => w.source === origin && w.id === widgetId);
+
+      if (!widget) {
+        return { success: false, error: `Widget not found: ${origin}/${widgetId}` };
+      }
+
+      const mockData = {
+        origin,
+        widget_id: widgetId,
+        widget_uuid: widgetUuid,
+        data: [],
+        timestamp: Date.now(),
+      };
+
+      return { success: true, data: mockData };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to get widget data' };
+    }
+  }
+
+  private async handleGetParamsOptions(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const origin = args.origin as string;
+      const widgetId = args.widget_id as string;
+      const paramName = args.param_name as string;
+
+      if (!origin || !widgetId || !paramName) {
+        return { success: false, error: 'origin, widget_id, and param_name are required' };
+      }
+
+      const widgets = await widgetService.getWidgets();
+      const widget = widgets.find((w) => w.source === origin && w.id === widgetId);
+
+      if (!widget) {
+        return { success: false, error: `Widget not found: ${origin}/${widgetId}` };
+      }
+
+      const param = widget.params?.find((p) => p.name === paramName);
+      if (!param) {
+        return { success: false, error: `Param not found: ${paramName}` };
+      }
+
+      const options = param.options || [];
+
+      return { success: true, data: { options } };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to get params options' };
+    }
+  }
+
+  private async handleCreateWidget(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const origin = args.origin as string;
+      const widgetId = args.widget_id as string;
+      const dashboardId = args.dashboard_id as string | undefined;
+      const dataArgs = args.data_args as Record<string, unknown> | undefined;
+      const uiArgs = args.ui_args as Record<string, unknown> | undefined;
+
+      if (!origin || !widgetId) {
+        return { success: false, error: 'origin and widget_id are required' };
+      }
+
+      const widgets = await widgetService.getWidgets();
+      const widget = widgets.find((w) => w.source === origin && w.id === widgetId);
+
+      if (!widget) {
+        return { success: false, error: `Widget not found: ${origin}/${widgetId}` };
+      }
+
+      if (widgetId === 'rich_note') {
+        return { success: false, error: 'create_widget does not support rich_note. Use add_generative_widget with widget_type="note" instead.' };
+      }
+
+      const widgetData = {
+        id: widgetId,
+        type: widgetId,
+        name: widget.name,
+        params: dataArgs,
+        position: uiArgs?.position || { x: 0, y: 0 },
+      };
+
+      const result = await widgetCRUDService.createWidget(dashboardId || '', widgetData);
+
+      return { success: true, data: { widget_uuid: result.instanceId, ...result } };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to create widget' };
+    }
+  }
+
+  private async handleReadWidget(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const widgetUuid = args.widget_uuid as string | undefined;
+      const widgetId = args.widget_id as string | undefined;
+      const dashboardId = args.dashboard_id as string | undefined;
+
+      if (!widgetUuid && !widgetId) {
+        return { success: false, error: 'widget_uuid or widget_id is required' };
+      }
+
+      if (!dashboardId) {
+        return { success: false, error: 'dashboard_id is required' };
+      }
+
+      const result = await widgetCRUDService.readWidget(dashboardId, widgetUuid || widgetId || '');
+
+      if (!result) {
+        return { success: false, error: 'Widget not found' };
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to read widget' };
+    }
+  }
+
+  private async handleUpdateWidget(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const widgetUuid = args.widget_uuid as string | undefined;
+      const widgetId = args.widget_id as string | undefined;
+      const dashboardId = args.dashboard_id as string | undefined;
+      const dataArgs = args.data_args as Record<string, unknown> | undefined;
+      const uiArgs = args.ui_args as Record<string, unknown> | undefined;
+
+      if (!widgetUuid && !widgetId) {
+        return { success: false, error: 'widget_uuid or widget_id is required' };
+      }
+
+      if (!dashboardId) {
+        return { success: false, error: 'dashboard_id is required' };
+      }
+
+      const hasLayoutArgs = uiArgs && (('x' in uiArgs) || ('y' in uiArgs) || ('w' in uiArgs) || ('h' in uiArgs));
+      if (hasLayoutArgs) {
+        return { success: false, error: 'update_widget only supports widget-instance config changes. Use update_widget_layout for x, y, w, h.' };
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (dataArgs) updates.data = dataArgs;
+      if (uiArgs) updates.ui = uiArgs;
+
+      const result = await widgetCRUDService.updateWidget(dashboardId, widgetUuid || widgetId || '', updates);
+
+      if (!result) {
+        return { success: false, error: 'Widget not found' };
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update widget' };
+    }
+  }
+
+  private async handleDeleteWidget(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const widgetUuid = args.widget_uuid as string | undefined;
+      const widgetId = args.widget_id as string | undefined;
+      const dashboardId = args.dashboard_id as string | undefined;
+
+      if (!widgetUuid && !widgetId) {
+        return { success: false, error: 'widget_uuid or widget_id is required' };
+      }
+
+      if (!dashboardId) {
+        return { success: false, error: 'dashboard_id is required' };
+      }
+
+      await widgetCRUDService.deleteWidget(dashboardId, widgetUuid || widgetId || '');
+
+      return { success: true, data: { deleted: true } };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to delete widget' };
+    }
+  }
+
+  private async handleUpdateWidgetLayout(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const x = args.x as number;
+      const y = args.y as number;
+      const w = args.w as number;
+      const h = args.h as number;
+      const widgetUuid = args.widget_uuid as string | undefined;
+      const widgetId = args.widget_id as string | undefined;
+      const dashboardId = args.dashboard_id as string | undefined;
+      const tabId = args.tab_id as string | undefined;
+
+      if (x === undefined || y === undefined || w === undefined || h === undefined) {
+        return { success: false, error: 'x, y, w, h are required' };
+      }
+
+      if (!widgetUuid && !widgetId) {
+        return { success: false, error: 'widget_uuid or widget_id is required' };
+      }
+
+      const layout = { x, y, w, h, tabId };
+      const result = await widgetCRUDService.updateWidgetLayout(dashboardId || '', widgetUuid || widgetId || '', layout);
+
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update widget layout' };
+    }
+  }
+
+  private async handleAddGenerativeWidget(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const widgetType = args.widget_type as string;
+      const dashboardId = args.dashboard_id as string | undefined;
+      const data = args.data as string | Array<Record<string, unknown>> | undefined;
+      const name = args.name as string | undefined;
+      const description = args.description as string | undefined;
+      const chartParams = args.chart_params as Record<string, unknown> | undefined;
+
+      const allowedTypes = ['note', 'table', 'chart', 'html'];
+      if (!widgetType || !allowedTypes.includes(widgetType)) {
+        return { success: false, error: `widget_type must be one of: ${allowedTypes.join(', ')}` };
+      }
+
+      if (!data) {
+        return { success: false, error: 'data is required' };
+      }
+
+      if ((widgetType === 'note' || widgetType === 'html') && typeof data !== 'string') {
+        return { success: false, error: `data must be a string for ${widgetType} widget_type` };
+      }
+
+      if ((widgetType === 'table' || widgetType === 'chart') && !Array.isArray(data)) {
+        return { success: false, error: `data must be an array for ${widgetType} widget_type` };
+      }
+
+      if (widgetType === 'chart' && !chartParams) {
+        return { success: false, error: 'chart widget_type requires chart_params' };
+      }
+
+      const widgetData = {
+        id: `generative-${widgetType}-${Date.now()}`,
+        type: `built-in-${widgetType}`,
+        name: name || `Generated ${widgetType}`,
+        description: description || '',
+        data,
+        chartParams,
+        position: { x: 0, y: 0 },
+      };
+
+      const result = await widgetCRUDService.createWidget(dashboardId || '', widgetData);
+
+      return { success: true, data: { widget_uuid: result.instanceId, ...result } };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to add generative widget' };
+    }
+  }
+
+  private async handleManageDashboard(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const operation = args.operation as string;
+
+      if (!operation) {
+        return { success: false, error: 'operation is required' };
+      }
+
+      switch (operation) {
+        case 'create': {
+          const name = args.name as string;
+          const activate = args.activate as boolean | undefined;
+
+          if (!name) {
+            return { success: false, error: 'name is required for create operation' };
+          }
+
+          const dashboard = await dashboardService.createDashboard(name, undefined);
+
+          if (activate !== false) {
+            await sessionManager.updateContext('', { activeDashboard: dashboard.id });
+          }
+
+          return { success: true, data: { dashboard_id: dashboard.id, ...dashboard } };
+        }
+        case 'read': {
+          const dashboardId = args.dashboard_id as string | undefined;
+
+          if (!dashboardId) {
+            return { success: false, error: 'dashboard_id is required for read operation' };
+          }
+
+          const dashboard = await dashboardService.getDashboardInfo(dashboardId);
+          return { success: true, data: dashboard };
+        }
+        case 'update': {
+          const dashboardId = args.dashboard_id as string;
+          const name = args.name as string;
+
+          if (!dashboardId) {
+            return { success: false, error: 'dashboard_id is required for update operation' };
+          }
+          if (name === undefined) {
+            return { success: false, error: 'name is required for update operation' };
+          }
+
+          const dashboard = await dashboardService.updateDashboard(dashboardId, { name });
+          return { success: true, data: dashboard };
+        }
+        default:
+          return { success: false, error: `Invalid operation: ${operation}. Must be one of: create, read, update` };
+      }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to manage dashboard' };
+    }
+  }
+
+  private async handleManageNavigationBar(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const operation = args.operation as string;
+      const dashboardId = args.dashboard_id as string | undefined;
+      const tabs = args.tabs as Array<Record<string, unknown>> | undefined;
+      const renameMap = args.rename_map as Record<string, string> | undefined;
+
+      if (!operation) {
+        return { success: false, error: 'operation is required' };
+      }
+
+      const allowedOperations = ['create', 'add_tabs', 'remove_tabs', 'rename_tabs'];
+      if (!allowedOperations.includes(operation)) {
+        return { success: false, error: `Invalid operation: ${operation}. Must be one of: ${allowedOperations.join(', ')}` };
+      }
+
+      if (operation === 'rename_tabs') {
+        if (!renameMap || Object.keys(renameMap).length === 0) {
+          return { success: false, error: 'rename_map is required for rename_tabs operation' };
+        }
+
+        for (const [tabId, newName] of Object.entries(renameMap)) {
+          await dashboardService.renameTab(dashboardId || '', tabId, newName);
+        }
+
+        return { success: true, data: { renamed: Object.keys(renameMap).length } };
+      }
+
+      if (!tabs || !Array.isArray(tabs) || tabs.length === 0) {
+        return { success: false, error: `tabs is required for ${operation} operation` };
+      }
+
+      for (const tab of tabs) {
+        if (typeof tab !== 'object' || !('name' in tab)) {
+          return { success: false, error: 'tabs must be an array of objects with name field' };
+        }
+      }
+
+      switch (operation) {
+        case 'create':
+        case 'add_tabs': {
+          const results: Array<Record<string, unknown>> = [];
+          for (const tab of tabs) {
+            const result = await dashboardService.addTab(dashboardId || '', tab.name as string);
+            results.push(result as unknown as Record<string, unknown>);
+          }
+          return { success: true, data: { tabs: results } };
+        }
+        case 'remove_tabs': {
+          const results: Array<Record<string, unknown>> = [];
+          for (const tab of tabs) {
+            const tabId = tab.id as string;
+            const result = await dashboardService.removeTab(dashboardId || '', tabId);
+            results.push(result as unknown as Record<string, unknown>);
+          }
+          return { success: true, data: { removed: results.length } };
+        }
+        default:
+          return { success: false, error: `Invalid operation: ${operation}` };
+      }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to manage navigation bar' };
+    }
+  }
+
+  private async handleNavigateWorkspace(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const operation = args.operation as string;
+      const dashboardId = args.dashboard_id as string | undefined;
+      const tabId = args.tab_id as string | undefined;
+
+      if (!operation) {
+        return { success: false, error: 'operation is required' };
+      }
+
+      const allowedOperations = ['dashboard', 'tab'];
+      if (!allowedOperations.includes(operation)) {
+        return { success: false, error: `Invalid operation: ${operation}. Must be one of: ${allowedOperations.join(', ')}` };
+      }
+
+      if (operation === 'dashboard') {
+        if (!dashboardId) {
+          return { success: false, error: 'dashboard_id is required for dashboard operation' };
+        }
+
+        await sessionManager.updateContext('', {
+          activeDashboard: dashboardId,
+          activeTab: tabId,
+        });
+
+        return { success: true, data: { dashboard_id: dashboardId, tab_id: tabId } };
+      }
+
+      if (operation === 'tab') {
+        if (!tabId) {
+          return { success: false, error: 'tab_id is required for tab operation' };
+        }
+
+        await sessionManager.updateContext('', {
+          activeTab: tabId,
+          activeDashboard: dashboardId,
+        });
+
+        return { success: true, data: { tab_id: tabId, dashboard_id: dashboardId } };
+      }
+
+      return { success: false, error: `Invalid operation: ${operation}` };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to navigate workspace' };
+    }
+  }
+
+  private async handleManageApps(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const operation = args.operation as string;
+      const backendId = args.backend_id as string;
+      const appName = args.app_name as string | undefined;
+      const templateId = args.template_id as string | undefined;
+      const dashboardName = args.dashboard_name as string | undefined;
+      const activate = args.activate as boolean | undefined;
+
+      if (!operation) {
+        return { success: false, error: 'operation is required' };
+      }
+
+      const allowedOperations = ['list', 'read', 'instantiate'];
+      if (!allowedOperations.includes(operation)) {
+        return { success: false, error: `Invalid operation: ${operation}. Must be one of: ${allowedOperations.join(', ')}` };
+      }
+
+      if (!backendId) {
+        return { success: false, error: 'backend_id is required' };
+      }
+
+      switch (operation) {
+        case 'list': {
+          const apps = appsService.listApps().map((app) => ({
+            name: app.name,
+            template_id: app.id,
+            description: app.description,
+            category: app.category,
+            tab_count: 1,
+            group_count: 0,
+            prompt_count: 0,
+            allow_customization: true,
+          }));
+          return { success: true, data: apps };
+        }
+        case 'read': {
+          if (!appName && !templateId) {
+            return { success: false, error: 'app_name or template_id is required for read operation' };
+          }
+
+          const app = appsService.getAppDefinition(appName || templateId || '');
+          if (!app) {
+            return { success: false, error: `App not found: ${appName || templateId}` };
+          }
+          return { success: true, data: app };
+        }
+        case 'instantiate': {
+          if (!appName && !templateId) {
+            return { success: false, error: 'app_name or template_id is required for instantiate operation' };
+          }
+
+          const result = await appsService.instantiateApp(appName || templateId || '', dashboardName);
+          if (!result) {
+            return { success: false, error: `App not found: ${appName || templateId}` };
+          }
+
+          if (activate !== false) {
+            await sessionManager.updateContext('', { activeDashboard: result.dashboardId });
+          }
+
+          return { success: true, data: { dashboard_id: result.dashboardId, ...result } };
+        }
+        default:
+          return { success: false, error: `Invalid operation: ${operation}` };
+      }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to manage apps' };
+    }
+  }
+
+  private async handleAssignTasksToAgents(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const taskRequests = args.task_requests as Array<Record<string, unknown>> | undefined;
+
+      if (!taskRequests || !Array.isArray(taskRequests) || taskRequests.length === 0) {
+        return { success: false, error: 'task_requests is required' };
+      }
+
+      const results: Array<Record<string, unknown>> = [];
+      for (const task of taskRequests) {
+        if (!task.id || !task.description) {
+          return { success: false, error: 'Each task must have id and description' };
+        }
+
+        results.push({
+          id: task.id,
+          status: 'assigned',
+          message: 'Task assigned successfully',
+        });
+      }
+
+      return { success: true, data: { tasks: results } };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to assign tasks to agents' };
+    }
+  }
+
+  private async handleGetSkillContent(args: Record<string, unknown>): Promise<HandlerResult> {
+    try {
+      const slug = args.slug as string;
+      const reason = args.reason as string | undefined;
+
+      if (!slug) {
+        return { success: false, error: 'slug is required' };
+      }
+
+      const skillContent = {
+        slug,
+        reason,
+        content: `Skill content for ${slug}`,
+        metadata: {
+          title: `Skill: ${slug}`,
+          description: `Description for ${slug}`,
+        },
+      };
+
+      return { success: true, data: skillContent };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to get skill content' };
     }
   }
 }

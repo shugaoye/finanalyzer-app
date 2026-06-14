@@ -302,14 +302,46 @@ companionBridge.onCommandRequest = async (command) => {
   const sessionId = companionBridge.session?.sessionId || '';
 
   // Extract standard fields from command object
-  // workspace-mcp sends params directly at top level:
-  // { command, request_id, origin, backend_id, widget_id, data_args, ui_args, dashboard_id, ... }
+  // workspace-mcp sends params in different formats depending on command type:
+  // - Most commands: { command, request_id, origin, backend_id, widget_id, ... }
+  // - get_widget_data: { command, request_id, data_sources: [{ origin, widget_id, ... }] }
+  // - get_params_options: { command, request_id, param_options_queries: [{ ... }] }
   const { command: cmd, request_id, ...rawArgs } = command as Record<string, unknown>;
 
-  // Strip null/undefined values to avoid downstream issues with null checks
-  const args = Object.fromEntries(
-    Object.entries(rawArgs).filter(([, v]) => v != null)
-  );
+  // Handle data_sources array (used by get_widget_data)
+  // Extract first element's fields as top-level args
+  // workspace-mcp transforms fields: widget_id -> id, data_args -> input_args
+  let args: Record<string, unknown>;
+  if (rawArgs.data_sources && Array.isArray(rawArgs.data_sources) && rawArgs.data_sources.length > 0) {
+    const dataSource = rawArgs.data_sources[0] as Record<string, unknown>;
+    // Map workspace-mcp field names to commandHandler expected names
+    args = {
+      ...dataSource,
+      widget_id: dataSource.id ?? dataSource.widget_id,  // id -> widget_id
+      data_args: dataSource.input_args ?? dataSource.data_args,  // input_args -> data_args
+    };
+    // Remove old field names if present
+    delete (args as Record<string, unknown>).id;
+    delete (args as Record<string, unknown>).input_args;
+  } else if (rawArgs.param_options_queries && Array.isArray(rawArgs.param_options_queries) && rawArgs.param_options_queries.length > 0) {
+    const query = rawArgs.param_options_queries[0] as Record<string, unknown>;
+    // Map workspace-mcp field names to commandHandler expected names
+    args = {
+      ...query,
+      widget_id: query.id ?? query.widget_id,  // id -> widget_id
+      param_name: query.param ?? query.param_name,  // param -> param_name
+      data_args: query.options_endpoint_input_args ?? query.data_args,  // options_endpoint_input_args -> data_args
+    };
+    // Remove old field names if present
+    delete (args as Record<string, unknown>).id;
+    delete (args as Record<string, unknown>).param;
+    delete (args as Record<string, unknown>).options_endpoint_input_args;
+  } else {
+    // Strip null/undefined values to avoid downstream issues with null checks
+    args = Object.fromEntries(
+      Object.entries(rawArgs).filter(([, v]) => v != null)
+    );
+  }
 
   const response = await commandHandler.handleCommand(
     sessionId,
