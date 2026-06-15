@@ -391,48 +391,54 @@ export function TableRenderer({ data, widget, onUpdate, settings }: TableRendere
     return tableData.columns;
   }, [tableData.columns, visibleColumns]);
 
-  const columnDefs = useMemo(() => {
-    let baseDefs: ColDef[] | undefined;
+  // Extract stable column configuration from widget
+  const columnConfig = useMemo(() => {
+    if (!widget) return null;
     
-    if (widget) {
-      const widgetAny = widget as unknown as Record<string, unknown>;
-      
-      // Check path 1: widget.tableConfig (set by DashboardCanvas)
-      const tableConfig = widgetAny.tableConfig as Record<string, unknown> | undefined;
-      if (tableConfig && (tableConfig as Record<string, unknown>).columnsDefs) {
-        const columnsDefs = (tableConfig as Record<string, unknown>).columnsDefs as ColumnDef[];
-        if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
-          baseDefs = createColumnDefsFromConfig(columnsDefs, effectiveColumns);
+    const widgetAny = widget as unknown as Record<string, unknown>;
+    
+    // Check path 1: widget.tableConfig (set by DashboardCanvas)
+    const tableConfig = widgetAny.tableConfig as Record<string, unknown> | undefined;
+    if (tableConfig && (tableConfig as Record<string, unknown>).columnsDefs) {
+      const columnsDefs = (tableConfig as Record<string, unknown>).columnsDefs as ColumnDef[];
+      if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
+        return JSON.parse(JSON.stringify(columnsDefs));
+      }
+    }
+    
+    // Check path 2: widget.data is WidgetConfig with data.data.table.columnsDefs
+    const widgetData = widgetAny.data as Record<string, unknown> | undefined;
+    if (widgetData) {
+      // widgetData might be the WidgetConfig itself (has id, name, data, etc.)
+      const tableDataObj = widgetData.data as Record<string, unknown> | undefined;
+      if (tableDataObj) {
+        const table = tableDataObj.table as Record<string, unknown> | undefined;
+        if (table) {
+          const columnsDefs = table.columnsDefs as ColumnDef[] | undefined;
+          if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
+            return JSON.parse(JSON.stringify(columnsDefs));
+          }
         }
       }
       
-      // Check path 2: widget.data is WidgetConfig with data.data.table.columnsDefs
-      // (when widget.data = widgetConfig from widgets.json via handleAddWidgetsFromMenu)
-      const widgetData = widgetAny.data as Record<string, unknown> | undefined;
-      if (!baseDefs && widgetData) {
-        // widgetData might be the WidgetConfig itself (has id, name, data, etc.)
-        const tableDataObj = widgetData.data as Record<string, unknown> | undefined;
-        if (tableDataObj) {
-          const table = tableDataObj.table as Record<string, unknown> | undefined;
-          if (table) {
-            const columnsDefs = table.columnsDefs as ColumnDef[] | undefined;
-            if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
-              baseDefs = createColumnDefsFromConfig(columnsDefs, effectiveColumns);
-            }
-          }
-        }
-        
-        // Or widgetData might be directly the table config (has columnsDefs directly)
-        if (!baseDefs && (widgetData as Record<string, unknown>).columnsDefs) {
-          const columnsDefs = (widgetData as Record<string, unknown>).columnsDefs as ColumnDef[];
-          if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
-            baseDefs = createColumnDefsFromConfig(columnsDefs, effectiveColumns);
-          }
+      // Or widgetData might be directly the table config (has columnsDefs directly)
+      if ((widgetData as Record<string, unknown>).columnsDefs) {
+        const columnsDefs = (widgetData as Record<string, unknown>).columnsDefs as ColumnDef[];
+        if (columnsDefs && Array.isArray(columnsDefs) && columnsDefs.length > 0) {
+          return JSON.parse(JSON.stringify(columnsDefs));
         }
       }
     }
     
-    if (!baseDefs) {
+    return null;
+  }, [widget?.id]);
+
+  const columnDefs = useMemo(() => {
+    let baseDefs: ColDef[];
+    
+    if (columnConfig) {
+      baseDefs = createColumnDefsFromConfig(columnConfig, effectiveColumns);
+    } else {
       baseDefs = createColumnDefs(effectiveColumns);
     }
     
@@ -453,11 +459,14 @@ export function TableRenderer({ data, widget, onUpdate, settings }: TableRendere
     }
     
     return baseDefs;
-  }, [effectiveColumns, widget, decimalPlaces]);
+  }, [effectiveColumns, columnConfig, decimalPlaces]);
 
   const onGridReady = useCallback((params: GridReadyEvent) => {
     params.api.sizeColumnsToFit();
   }, []);
+
+  // Create stable context object to prevent unnecessary re-renders
+  const gridContext = useMemo(() => ({ onUpdate } as TableRendererContext), [onUpdate]);
 
   if (!tableData || tableData.rows.length === 0) {
     return (
@@ -474,7 +483,7 @@ export function TableRenderer({ data, widget, onUpdate, settings }: TableRendere
         rowData={tableData.rows}
         columnDefs={columnDefs}
         onGridReady={onGridReady}
-        context={{ onUpdate } as TableRendererContext}
+        context={gridContext}
         defaultColDef={{
           filter: true,
           floatingFilter: false,

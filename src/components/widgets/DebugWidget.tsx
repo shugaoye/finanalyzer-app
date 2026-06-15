@@ -646,7 +646,7 @@ function DebugWidget({
       dashboardId: "debug-dashboard",
       position: { x: 0, y: 0 },
       currentParams: resolvedParams,
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: widgetDef.id, // Use widgetDef.id for stability instead of timestamp
       data: processedPreviewData,
     };
   }, [widgetDef, resolvedParams, processedPreviewData]);
@@ -769,7 +769,13 @@ function DebugWidget({
       return []; // Empty array since Select is disabled
     }
 
-    if (widgets.length === 0) {
+    // Filter widgets to only include those with valid IDs
+    const validWidgets = widgets.filter((w: WidgetConfig) => {
+      const widgetId = getWidgetId(w);
+      return widgetId && widgetId.trim() !== "";
+    });
+
+    if (validWidgets.length === 0) {
       return [
         {
           label: t("debugWidget.connectDataSource") || "Connect to data source for more widgets",
@@ -779,7 +785,7 @@ function DebugWidget({
       ];
     }
 
-    return widgets.map((w: WidgetConfig) => {
+    return validWidgets.map((w: WidgetConfig) => {
       const widgetId = getWidgetId(w);
       return {
         label: `${w.name} (${widgetId})`,

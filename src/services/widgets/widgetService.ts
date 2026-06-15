@@ -72,9 +72,14 @@ class WidgetService {
                 typeof connectionWidgets === "object" &&
                 connectionWidgets !== null
               ) {
-                Object.values(connectionWidgets).forEach((widget: unknown) => {
+                Object.entries(connectionWidgets).forEach(([key, widget]: [string, unknown]) => {
+                  const widgetRecord = widget as Record<string, unknown>;
+                  // Use the JSON key as the widget ID if not explicitly provided
+                  if (!widgetRecord.id && !widgetRecord.widgetId && !widgetRecord._id) {
+                    widgetRecord.id = key;
+                  }
                   const widgetConfig = this.convertToWidgetConfig(
-                    widget as Record<string, unknown>,
+                    widgetRecord,
                     connection,
                   );
                   widgets.push(widgetConfig);
