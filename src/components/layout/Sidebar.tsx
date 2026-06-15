@@ -11,6 +11,7 @@ import {
 import { setActiveDashboardId } from "../../services/dashboardSession";
 import { McpCompanionDialog } from "../settings/McpCompanionDialog";
 import { generateUUID } from "../../utils/uuid";
+import { companionBridge } from "../../services/mcp/companionBridge";
 import "./Sidebar.css";
 
 interface NavItem {
@@ -68,6 +69,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [isCompanionConnected, setIsCompanionConnected] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,6 +78,20 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         setDashboards(list.map((d) => ({ id: d.id, name: d.name }))),
       )
       .catch(() => setDashboards([]));
+  }, []);
+
+  useEffect(() => {
+    setIsCompanionConnected(companionBridge.connected);
+    
+    const unsubscribe = companionBridge.subscribe((event) => {
+      if (event.type === "connected") {
+        setIsCompanionConnected(true);
+      } else if (event.type === "disconnected") {
+        setIsCompanionConnected(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleDeleteDashboard = async (id: string) => {
@@ -236,6 +252,17 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         </Link>
         {!isMobile && (
           <div className="sidebar-header-actions">
+            {isCompanionConnected && (
+              <button
+                type="button"
+                title="Workspace MCP Companion is active"
+                className="sidebar-companion-indicator"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </button>
+            )}
             <button
               type="button"
               title={t("sidebar.settings")}
