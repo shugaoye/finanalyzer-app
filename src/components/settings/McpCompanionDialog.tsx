@@ -1,4 +1,4 @@
-import { Button } from "@openbb/ui";
+import { Button, Icon } from "@openbb/ui";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { companionBridge, type BridgeConnectionStatus } from "../../services/mcp/companionBridge";
@@ -214,17 +214,14 @@ export function McpCompanionDialog({ isOpen, onClose }: McpCompanionDialogProps)
         )}
 
         {/* Close Button */}
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={handleClose}
-          className="absolute top-4 right-4 p-1 h-5 w-5"
+          className="absolute top-4 right-4 p-1.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-800 transition-colors cursor-pointer"
           aria-label="Close"
         >
-          <svg className="h-4 w-4">
-            <use href="/assets/icons/sprite.svg?v=v5.2.0#x" />
-          </svg>
-        </Button>
+          <Icon name={"x" as never} size={16} />
+        </button>
       </div>
     </>
   );
