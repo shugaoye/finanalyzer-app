@@ -1,11 +1,12 @@
 import type { CommandMessage, CommandResponse } from './sessionManager';
-import { sessionManager } from './sessionManager';
 import { snapshotGenerator } from './snapshotGenerator';
 import { dashboardService } from './dashboardService';
 import { widgetCRUDService } from './widgetCRUDService';
 import { widgetService } from '../widgets/widgetService';
 import { connectionService } from '../connections/connectionService';
 import { appsService } from './appsService';
+import { companionBridge } from './companionBridge';
+import { workspaceNavigationService } from './workspaceNavigationService';
 
 // Re-export types for test files
 export type { CommandMessage, CommandResponse } from './sessionManager';
@@ -328,10 +329,7 @@ export class CommandHandler {
     try {
       const dashboardId = args.dashboardId as string;
       const tabId = args.tabId as string | undefined;
-      await sessionManager.updateContext(args.sessionId as string, {
-        activeDashboard: dashboardId,
-        activeTab: tabId,
-      });
+      this.navigateBrowserToDashboard(dashboardId, tabId);
       return { success: true, data: { dashboardId, tabId } };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Failed to navigate' };
@@ -874,7 +872,7 @@ export class CommandHandler {
           const dashboard = await dashboardService.createDashboard(name, undefined);
 
           if (activate !== false) {
-            await sessionManager.updateContext('', { activeDashboard: dashboard.id });
+            this.navigateBrowserToDashboard(dashboard.id);
           }
 
           return { success: true, data: { dashboard_id: dashboard.id, ...dashboard } };
@@ -999,11 +997,7 @@ export class CommandHandler {
           return { success: false, error: 'dashboard_id is required for dashboard operation' };
         }
 
-        await sessionManager.updateContext('', {
-          activeDashboard: dashboardId,
-          activeTab: tabId,
-        });
-
+        this.navigateBrowserToDashboard(dashboardId, tabId);
         return { success: true, data: { dashboard_id: dashboardId, tab_id: tabId } };
       }
 
@@ -1012,9 +1006,10 @@ export class CommandHandler {
           return { success: false, error: 'tab_id is required for tab operation' };
         }
 
-        await sessionManager.updateContext('', {
-          activeTab: tabId,
-          activeDashboard: dashboardId,
+        void workspaceNavigationService.switchTab(tabId);
+        companionBridge.sendContextChange({
+          currentDashboardId: dashboardId ?? workspaceNavigationService.getCurrentDashboardId() ?? undefined,
+          currentTabId: tabId,
         });
 
         return { success: true, data: { tab_id: tabId, dashboard_id: dashboardId } };
@@ -1024,6 +1019,27 @@ export class CommandHandler {
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Failed to navigate workspace' };
     }
+  }
+
+  /** Trigger actual browser navigation and notify the sidecar. */
+  private navigateBrowserToDashboard(dashboardId: string, tabId?: string): void {
+    // Update local state
+    void workspaceNavigationService.navigateToDashboard(dashboardId);
+    if (tabId) {
+      void workspaceNavigationService.switchTab(tabId);
+    }
+
+    // Notify the sidecar via companionBridge
+    companionBridge.sendContextChange({
+      currentDashboardId: dashboardId,
+      currentTabId: tabId,
+    });
+
+    // Trigger actual browser navigation via hash-based router
+    const hashPath = tabId
+      ? `#/app/${dashboardId}?tab=${encodeURIComponent(tabId)}`
+      : `#/app/${dashboardId}`;
+    window.location.hash = hashPath;
   }
 
   private async handleManageApps(args: Record<string, unknown>): Promise<HandlerResult> {
@@ -1091,7 +1107,7 @@ export class CommandHandler {
           }
 
           if (activate !== false) {
-            await sessionManager.updateContext('', { activeDashboard: result.dashboardId });
+            this.navigateBrowserToDashboard(result.dashboardId);
           }
 
           return { success: true, data: { dashboard_id: result.dashboardId, ...result } };

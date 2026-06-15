@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { DashboardCanvas } from "../../components/dashboard/DashboardCanvas";
 import { getDashboards } from "../../services/dashboardApi";
 import { setActiveDashboardId } from "../../services/dashboardSession";
+import { companionBridge } from "../../services/mcp/companionBridge";
+import { workspaceNavigationService } from "../../services/mcp/workspaceNavigationService";
 
 export const Route = createFileRoute("/app/$id")({
   component: DashboardRouteComponent,
@@ -15,6 +17,20 @@ function DashboardRouteComponent() {
   const [loading, setLoading] = useState(true);
   const [resolvedId, setResolvedId] = useState<string>(id);
   const activeTab = (search as { tab?: string }).tab;
+
+  // Sync workspace navigation state and companion bridge context when dashboard loads
+  useEffect(() => {
+    if (resolvedId && !loading) {
+      void workspaceNavigationService.navigateToDashboard(resolvedId);
+      if (activeTab) {
+        void workspaceNavigationService.switchTab(activeTab);
+      }
+      companionBridge.sendContextChange({
+        currentDashboardId: resolvedId,
+        currentTabId: activeTab ?? undefined,
+      });
+    }
+  }, [resolvedId, activeTab, loading]);
 
   useEffect(() => {
     const load = async () => {
