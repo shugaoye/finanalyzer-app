@@ -3,7 +3,7 @@ import { MarkdownWidget } from "../../components/widgets/MarkdownWidget";
 import DebugWidget from "../../components/widgets/DebugWidget";
 import { TableWidget } from "../../components/widgets/shared/TableWidget";
 import { ChartWidget } from "../../components/widgets/shared/ChartWidget";
-import { NavigationBarWidget } from "../../components/widgets/NavigationBarWidget";
+
 import type { WidgetConfig, WidgetTypeDefinition } from "../../types/widgets";
 import { BaseWidget } from "../../types/widgets";
 
@@ -404,12 +404,4 @@ WidgetFactory.registerWidgetType({
   renderer: DebugWidget,
 });
 
-// Register Navigation Bar widget type
-WidgetFactory.registerWidgetType({
-  type: "navigationBar",
-  displayName: "Navigation Bar",
-  description: "A widget that provides navigation functionality",
-  defaultGridData: { w: 6, h: 1 },
-  supportedParameters: [],
-  renderer: NavigationBarWidget,
-});
+

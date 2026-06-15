@@ -264,7 +264,7 @@ export default {
       english: "English",
       chinese: "中文",
     },
-    version: "v1.15.0", // Replace with the actual version number
+    version: "v1.15.1-dev", // Replace with the actual version number
   },
   mobileNav: {
     menu: "Menu",
@@ -493,6 +493,12 @@ export default {
     selectAll: "Select All",
     deselectAll: "Deselect All",
     visibleColumnsDescription: "At least one column must be visible",
+  },
+  manageTabs: {
+    title: "Manage Tabs",
+    enterTabName: "Enter tab name",
+    addNewTab: "+ Add New Tab",
+    deleteTab: "Delete tab",
   },
   debugWidget: {
     definitionEditor: "Definition Editor",

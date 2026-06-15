@@ -262,7 +262,7 @@ export default {
       english: "English",
       chinese: "中文",
     },
-    version: "v1.15.0", // Replace with the actual version number
+    version: "v1.15.1-dev", // Replace with the actual version number
   },
   mobileNav: {
     menu: "菜单",
@@ -490,6 +490,12 @@ export default {
     selectAll: "全选",
     deselectAll: "取消全选",
     visibleColumnsDescription: "至少保留一列可见",
+  },
+  manageTabs: {
+    title: "管理标签页",
+    enterTabName: "输入标签名称",
+    addNewTab: "+ 添加新标签",
+    deleteTab: "删除标签",
   },
   debugWidget: {
     definitionEditor: "定义编辑器",

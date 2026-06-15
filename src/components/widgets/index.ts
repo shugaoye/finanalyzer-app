@@ -3,9 +3,10 @@ export { default as WidgetMenuModal } from "./WidgetMenuModal";
 export { WidgetWrapper } from "./WidgetWrapper";
 export { ChartWidget } from "./shared/ChartWidget";
 export { HtmlWidget } from "./shared/HtmlWidget";
-export { MarkdownWidget } from "./shared/MarkdownWidget";
+export { MarkdownWidget } from "./MarkdownWidget";
 export { MetricWidget } from "./shared/MetricWidget";
 export { TableWidget } from "./shared/TableWidget";
 export { default as TableSettingsModal } from "./TableSettingsModal";
-export { NavigationBarWidget } from "./NavigationBarWidget";
+
 export { NavigationBar } from "./NavigationBar";
+export { ManageTabsModal } from "./ManageTabsModal";

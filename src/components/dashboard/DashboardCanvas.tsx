@@ -24,6 +24,7 @@ import {
   HtmlWidget,
   MarkdownWidget,
   MetricWidget,
+  ManageTabsModal,
   TableWidget,
   TableSettingsModal,
   WidgetMenuModal,
@@ -110,48 +111,76 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
   const [activeId, setActiveId] = useState<string>(propId || "");
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [layout, setLayout] = useState<LayoutItem[]>([]);
+  const [dashboardTabs, setDashboardTabs] = useState<Array<{ id: string; name: string }>>([]);
 
-  // Extract unique tabs from widgets
-  const tabs = widgets.reduce((acc, widget) => {
-    const tabId = widget.data?.tabId as string;
-    const tabName = widget.data?.tabName as string;
-    if (tabId && tabName && !acc.find(t => t.id === tabId)) {
-      acc.push({ id: tabId, name: tabName });
+  // Extract unique tabs from dashboard metadata and widget data
+  const tabs = useMemo(() => {
+    // Prefer dashboard-level tabs (created via manage_navigation_bar MCP tool)
+    if (dashboardTabs.length > 0) {
+      return dashboardTabs;
     }
-    return acc;
-  }, [] as Array<{ id: string; name: string }>);
+    // Fall back to widget-level tabId/tabName
+    return widgets.reduce((acc, widget) => {
+      const tabId = widget.data?.tabId as string;
+      const tabName = widget.data?.tabName as string;
+      if (tabId && tabName && !acc.find(t => t.id === tabId)) {
+        acc.push({ id: tabId, name: tabName });
+      }
+      return acc;
+    }, [] as Array<{ id: string; name: string }>);
+  }, [widgets, dashboardTabs]);
+
 
   // Determine active tab (use prop if provided, otherwise first tab)
   const activeTab = propActiveTab || (tabs.length > 0 ? tabs[0].id : "");
 
   // Filter widgets based on active tab (with deduplication by widget.id)
+  // Also exclude navigation-bar type widgets (they render as top-level bar, not grid cards)
   const filteredWidgets = useMemo(() => {
-    const base = tabs.length > 0 
-      ? widgets.filter(widget => widget.data?.tabId === activeTab)
+    const base = tabs.length > 0
+      ? widgets.filter(widget => {
+          const widgetTabId = widget.data?.tabId as string;
+          if (widgetTabId) {
+            // Widget has explicit tab assignment -> filter by active tab
+            return widgetTabId === activeTab;
+          }
+          // Widget without tabId shows in all tabs
+          return true;
+        })
       : widgets;
-    
+
     // Deduplicate by widget.id, keeping the first occurrence
     const seen = new Set<string>();
     return base.filter(widget => {
       if (!widget.id || seen.has(widget.id)) return false;
+      if (widget.type === "navigationBar") return false; // Rendered as top-level bar, not a card
       seen.add(widget.id);
       return true;
     });
   }, [widgets, tabs, activeTab]);
 
   // Filter layout based on active tab (with deduplication by item.i)
+  // Also exclude navigation-bar type widget layout items
   const filteredLayout = useMemo(() => {
     const baseLayout = tabs.length > 0
       ? layout.filter(item => {
           const widget = widgets.find(w => w.id === item.i);
-          return widget?.data?.tabId === activeTab;
+          const widgetTabId = widget?.data?.tabId as string;
+          if (widgetTabId) {
+            // Widget has explicit tab assignment -> filter by active tab
+            return widgetTabId === activeTab;
+          }
+          // Widget without tabId shows in all tabs
+          return true;
         })
       : layout;
-    
+
     // Deduplicate by item.i, keeping the first occurrence
     const seen = new Set<string>();
     return baseLayout.filter(item => {
       if (!item.i || seen.has(item.i)) return false;
+      const widget = widgets.find(w => w.id === item.i);
+      if (widget?.type === "navigationBar") return false; // Rendered as top-level bar, not a grid item
       seen.add(item.i);
       return true;
     });
@@ -186,6 +215,7 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
   const [groupConfigs, setGroupConfigs] = useState<Group[]>([]);
   const [tableSettings, setTableSettings] = useState<Record<string, TableSettings>>({});
   const [openTableSettingsWidgetId, setOpenTableSettingsWidgetId] = useState<string | null>(null);
+  const [isManageTabsOpen, setIsManageTabsOpen] = useState(false);
 
   useEffect(() => {
     if (propId && propId !== activeId) {
@@ -215,6 +245,7 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
           if (dashboard) {
             const w = (dashboard.widgets || []).map(apiWidgetToWidget);
             setWidgets(w);
+            setDashboardTabs(dashboard.tabs?.map(t => ({ id: t.id, name: t.name })) || []);
             const rawLayout = w.map((widget) => ({
               i: widget.id,
               x: widget.position.x,
@@ -244,6 +275,7 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
             const first = dashboardList[0];
             setActiveId(first.id);
             setActiveDashboardId(first.id);
+            setDashboardTabs(first.tabs?.map(t => ({ id: t.id, name: t.name })) || []);
             const w = (first.widgets || []).map(apiWidgetToWidget);
             setWidgets(w);
             const rawLayout = w.map((widget) => ({
@@ -660,6 +692,57 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
     }
   };
 
+  const handleSaveTabs = async (savedTabs: { id: string; name: string }[]) => {
+    if (!activeId) return;
+    try {
+      // Build tab entries for dashboard
+      const newTabEntries = savedTabs.map((tab) => ({
+        id: tab.id || `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: tab.name,
+      }));
+
+      // Update widgets: assign tabId/tabName to all widgets based on first tab
+      // Widgets without a matching tab get assigned to the first tab
+      const updatedWidgets = widgets.map((widget) => {
+        const existingTabId = widget.data?.tabId as string;
+        const stillExists = newTabEntries.some((t) => t.id === existingTabId);
+        if (stillExists && existingTabId) {
+          return widget;
+        }
+        // Assign to the first available tab
+        const targetTab = newTabEntries[0];
+        if (targetTab) {
+          return {
+            ...widget,
+            data: {
+              ...widget.data,
+              tabId: targetTab.id,
+              tabName: targetTab.name,
+            },
+          };
+        }
+        return widget;
+      });
+
+      setWidgets(updatedWidgets);
+      setDashboardTabs(newTabEntries);
+
+      // Persist to backend via dashboard update with tabs metadata
+      await updateDashboard(activeId, {
+        widgets: updatedWidgets.map((w) => ({
+          id: w.id,
+          type: w.type,
+          title: w.title,
+          position: w.position,
+          data: w.data,
+        })),
+        tabs: newTabEntries,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save tabs");
+    }
+  };
+
   if (loading) {
     return (
       <div className="dashboard-canvas flex flex-col h-full">
@@ -686,7 +769,9 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
         <NavigationBar
           tabs={tabs}
           activeTab={activeTab}
+          dashboardId={activeId}
           onTabChange={onTabChange}
+          onEditTabs={() => setIsManageTabsOpen(true)}
         />
       )}
       <div className="dashboard-grid-container flex-1" ref={containerRef}>
@@ -1345,6 +1430,12 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
         accept="application/json,.json"
         onChange={handleFileChange}
         style={{ display: "none" }}
+      />
+      <ManageTabsModal
+        isOpen={isManageTabsOpen}
+        onClose={() => setIsManageTabsOpen(false)}
+        initialTabs={tabs.map((t) => ({ id: t.id, name: t.name }))}
+        onSave={handleSaveTabs}
       />
     </div>
   );
