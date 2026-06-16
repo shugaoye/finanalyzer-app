@@ -5,6 +5,7 @@ import EndpointParameterComponent from './EndpointParameterComponent';
 import FormParameterComponent from './FormParameterComponent';
 import DropdownParameterComponent from './DropdownParameterComponent';
 import TickerParameterComponent from './TickerParameterComponent';
+import DatePickerParameterComponent from './DatePickerParameterComponent';
 import { Input, Select, Checkbox } from '@openbb/ui';
 
 interface ParameterRendererProps {
@@ -167,12 +168,11 @@ const ParameterRenderer: React.FC<ParameterRendererProps> = ({
 
     case 'date':
       return (
-        <Input
-          type="date"
+        <DatePickerParameterComponent
+          parameter={parameter}
           value={String(value || '')}
           onChange={handleDateChange}
           disabled={disabled}
-          aria-label={parameter.label}
         />
       );
 

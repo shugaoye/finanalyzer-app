@@ -2,6 +2,24 @@ import type { WidgetConfig, WidgetParameter } from "../../types/widgets";
 import { connectionService } from "../connections/connectionService";
 import { WidgetFactory } from "./widgetFactory";
 
+/** Resolves OpenBB date modifiers like "$currentDate", "$currentDate-1d" to actual dates */
+function resolveDateModifier(raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw;
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith('$currentDate')) return raw;
+
+  const now = new Date();
+  const daysMatch = trimmed.match(/\$currentDate([+-]\d+)d/);
+  if (daysMatch) {
+    const offset = parseInt(daysMatch[1], 10);
+    now.setDate(now.getDate() + offset);
+  }
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 class WidgetService {
   private widgets: WidgetConfig[] = [];
   private lastFetchTime = 0;
@@ -151,14 +169,19 @@ class WidgetService {
         if (paramType === "text" && Array.isArray(param.options) && param.options.length > 0) {
           paramType = "dropdown";
         }
+
+        // Resolve date modifiers for date-type parameters
+        const resolvedValue = paramType === 'date' ? resolveDateModifier(param.value) : param.value;
+        const resolvedDefault = paramType === 'date' ? resolveDateModifier(param.default !== undefined ? param.default : param.value) : (param.default !== undefined ? param.default : param.value);
+
         return {
           name: param.name || param.paramName,
           paramName: param.paramName,
           type: paramType,
           label: param.label || param.name,
           description: param.description,
-          default: param.default !== undefined ? param.default : param.value,
-          value: param.value,
+          default: resolvedDefault,
+          value: resolvedValue,
           required: param.required,
           options: param.options,
           min: param.min,

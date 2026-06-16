@@ -6,6 +6,7 @@ import FormParameterComponent from '../widgets/shared/FormParameterComponent';
 import EndpointParameterComponent from '../widgets/shared/EndpointParameterComponent';
 import DropdownParameterComponent from '../widgets/shared/DropdownParameterComponent';
 import TickerParameterComponent from '../widgets/shared/TickerParameterComponent';
+import DatePickerParameterComponent from '../widgets/shared/DatePickerParameterComponent';
 
 interface ParameterInputProps {
   paramName: string;
@@ -143,6 +144,17 @@ export function ParameterInput({
       );
 
     case 'date':
+      if (parameter) {
+        return (
+          <DatePickerParameterComponent
+            parameter={parameter}
+            value={String(value || parameter.default || '')}
+            onChange={(newValue) => onChange(paramName, newValue)}
+            disabled={disabled}
+          />
+        );
+      }
+      // Fallback to native date input if no parameter object
       return (
         <div className="obb-parameter flex items-center justify-between gap-1 h-[20px]">
           <input
