@@ -255,6 +255,63 @@ class ParameterService {
   }
 
   /**
+   * Search for tickers (type-ahead search for ticker parameter)
+   */
+  async searchTickers(params: {
+    query: string;
+    widgetId: string;
+    instanceId: string;
+    baseUrl?: string;
+    paramName?: string;
+  }): Promise<ParameterOption[]> {
+    const { query, baseUrl = ParameterService.DEFAULT_BASE_URL, paramName = 'symbol' } = params;
+
+    if (!query.trim()) {
+      return [];
+    }
+
+    // Build the ticker search URL
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const searchPath = `/api/v1/widgets/ticker_search`;
+    let url: string;
+
+    try {
+      const baseParsed = new URL(normalizedBase);
+      const basePath = baseParsed.pathname.replace(/\/$/, '') || '/';
+      if (basePath !== '/' && searchPath.startsWith(basePath)) {
+        url = `${baseParsed.origin}${searchPath}`;
+      } else {
+        url = `${normalizedBase}${searchPath}`;
+      }
+    } catch {
+      url = `${normalizedBase}${searchPath}`;
+    }
+
+    // Add query params
+    const separator = url.includes('?') ? '&' : '?';
+    url = `${url}${separator}query=${encodeURIComponent(query)}&param_name=${encodeURIComponent(paramName)}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ticker search failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return this.processOptionsResponse(data);
+    } catch (error) {
+      console.error('Error searching tickers:', error);
+      return [];
+    }
+  }
+
+  /**
    * Submit form parameter data
    */
   async submitFormParameter(

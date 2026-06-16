@@ -4,6 +4,7 @@ import { isEndpointParameter, isFormParameter } from '../../../types/widgets';
 import EndpointParameterComponent from './EndpointParameterComponent';
 import FormParameterComponent from './FormParameterComponent';
 import DropdownParameterComponent from './DropdownParameterComponent';
+import TickerParameterComponent from './TickerParameterComponent';
 import { Input, Select, Checkbox } from '@openbb/ui';
 
 interface ParameterRendererProps {
@@ -148,6 +149,19 @@ const ParameterRenderer: React.FC<ParameterRendererProps> = ({
           value={String(value || '')}
           onChange={(newValue) => onChange(newValue)}
           disabled={disabled}
+        />
+      );
+
+    case 'ticker':
+      return (
+        <TickerParameterComponent
+          parameter={parameter}
+          value={String(value || '')}
+          onChange={(newValue) => onChange(newValue)}
+          widgetId={widgetId}
+          instanceId={instanceId}
+          disabled={disabled}
+          connectionUrl={connectionUrl}
         />
       );
 

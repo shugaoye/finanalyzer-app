@@ -5,6 +5,7 @@ import { isEndpointParameter } from '../../types/widgets';
 import FormParameterComponent from '../widgets/shared/FormParameterComponent';
 import EndpointParameterComponent from '../widgets/shared/EndpointParameterComponent';
 import DropdownParameterComponent from '../widgets/shared/DropdownParameterComponent';
+import TickerParameterComponent from '../widgets/shared/TickerParameterComponent';
 
 interface ParameterInputProps {
   paramName: string;
@@ -182,6 +183,34 @@ export function ParameterInput({
         );
       }
       // Fallback to text input if no parameter object provided
+      return (
+        <div className="obb-parameter flex items-center justify-between gap-1 h-[20px]">
+          <input
+            type="text"
+            id={`param-${paramName}`}
+            placeholder={label}
+            value={String(value || '')}
+            onChange={(e) => onChange(paramName, e.target.value)}
+            className={inputClasses}
+          />
+        </div>
+      );
+
+    case 'ticker':
+      if (parameter && widgetId && instanceId) {
+        return (
+          <TickerParameterComponent
+            parameter={parameter}
+            value={String(value || '')}
+            onChange={(newValue) => onChange(paramName, newValue)}
+            widgetId={widgetId}
+            instanceId={instanceId}
+            disabled={disabled}
+            connectionUrl={connectionUrl}
+          />
+        );
+      }
+      // Fallback to text input
       return (
         <div className="obb-parameter flex items-center justify-between gap-1 h-[20px]">
           <input
