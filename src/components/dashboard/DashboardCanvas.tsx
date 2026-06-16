@@ -144,8 +144,10 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
             // Widget has explicit tab assignment -> filter by active tab
             return widgetTabId === activeTab;
           }
-          // Widget without tabId shows in all tabs
-          return true;
+          // Widget without tabId: only show on the first tab to avoid
+          // leaking into every tab (which would reproduce the bug where
+          // adding to one tab makes the widget appear in all others).
+          return activeTab === tabs[0].id;
         })
       : widgets;
 
@@ -170,8 +172,9 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
             // Widget has explicit tab assignment -> filter by active tab
             return widgetTabId === activeTab;
           }
-          // Widget without tabId shows in all tabs
-          return true;
+          // Widget without tabId: only show on the first tab to avoid
+          // leaking into every tab.
+          return activeTab === tabs[0].id;
         })
       : layout;
 
@@ -603,7 +606,20 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
     [widgets],
   );
 
+  // Capture the active tab context at the moment "Add Widget" is clicked.
+  // This avoids a race condition where TanStack Router's async navigate()
+  // hasn't completed yet, and handleAddWidgetsFromMenu would otherwise
+  // read a stale activeTab (assigning the widget to the wrong tab).
+  const addWidgetTabRef = useRef<{ id: string; name?: string } | null>(null);
+  const [addWidgetTabName, setAddWidgetTabName] = useState<string | undefined>();
+
   const handleAddWidget = () => {
+    const tabInfo = {
+      id: activeTab,
+      name: tabs.find((t) => t.id === activeTab)?.name,
+    };
+    addWidgetTabRef.current = tabInfo;
+    setAddWidgetTabName(tabInfo.name);
     setIsWidgetMenuOpen(true);
   };
 
@@ -654,17 +670,43 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
 
   const handleAddWidgetsFromMenu = async (selectedWidgets: WidgetConfig[]) => {
     if (!activeId) return;
+    // Use the tab context captured when "Add Widget" was clicked,
+    // falling back to current activeTab if not set (e.g., from batch import).
+    // This avoids a race condition where TanStack Router's async navigate()
+    // hasn't updated the URL yet, causing the widget to be assigned to the
+    // wrong dashboard tab.
+    const capturedTab = addWidgetTabRef.current;
+    const effectiveTabId =
+      capturedTab?.id || activeTab || (tabs.length > 0 ? tabs[0].id : "");
+    const effectiveTabName =
+      capturedTab?.name ||
+      tabs.find((t) => t.id === effectiveTabId)?.name;
+
     for (const widgetConfig of selectedWidgets) {
-      const currentTabName = tabs.find((t) => t.id === activeTab)?.name;
+      // Calculate a non-overlapping position on the active tab's grid.
+      // Place new widgets below the lowest existing widget to avoid overlap.
+      const tabLayout = layout.filter((item) => {
+        const w = widgets.find((x) => x.id === item.i);
+        return w && (w.data?.tabId as string) === effectiveTabId;
+      });
+      const lowestY = tabLayout.length > 0
+        ? Math.max(...tabLayout.map((item) => item.y + item.h))
+        : 0;
+
       const newWidget: Widget = {
         id: `${widgetConfig.id}-${Date.now()}`,
         type: widgetConfig.type || "metric",
         title: widgetConfig.name,
-        position: { x: 0, y: 0, w: widgetConfig.gridData?.w || 2, h: widgetConfig.gridData?.h || 2 },
+        position: {
+          x: 0,
+          y: lowestY,
+          w: widgetConfig.gridData?.w || 2,
+          h: widgetConfig.gridData?.h || 2,
+        },
         data: {
           ...widgetConfig,
-          ...(activeTab
-            ? { tabId: activeTab, tabName: currentTabName || undefined }
+          ...(effectiveTabId
+            ? { tabId: effectiveTabId, tabName: effectiveTabName || undefined }
             : {}),
         },
       };
@@ -685,6 +727,8 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
         setError(e instanceof Error ? e.message : "Failed to add widget");
       }
     }
+    // Clear the captured tab context after use
+    addWidgetTabRef.current = null;
   };
 
   const handleDeleteWidget = async (widgetId: string) => {
@@ -1389,6 +1433,7 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
         onAddWidgets={handleAddWidgetsFromMenu}
         widgets={[...widgetDefinitions, ...customWidgets]}
         loading={!widgetDefinitions.length && !customWidgets.length}
+        currentTabName={addWidgetTabName}
       />
       {openTableSettingsWidgetId && (() => {
         const widget = widgets.find(w => w.id === openTableSettingsWidgetId);

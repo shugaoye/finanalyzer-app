@@ -64,6 +64,7 @@ export function useEnhancedWidget(
         parameter,
         widgetId: widget.id,
         instanceId: widget.instanceId,
+        baseUrl: widget.connectionUrl || undefined,
       });
 
       setParamOptions((prev: Record<string, ParameterOption[]>) => ({

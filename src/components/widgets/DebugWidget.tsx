@@ -789,18 +789,22 @@ function DebugWidget({
   // Update browser URL when parameters change
   useEffect(() => {
     if (widgetDef && activeTab === "parameters") {
-      // Update the URL without reloading the page
-      // For hash-based routing, append query params to the existing route hash
-      const urlParams = new URLSearchParams();
+      const currentHash = window.location.hash;
+      // Preserve existing query params (e.g., tab=Test02) to avoid
+      // accidentally switching tabs when updating the URL.
+      const hashParts = currentHash.split("?");
+      const urlParams = hashParts[1]
+        ? new URLSearchParams(hashParts[1])
+        : new URLSearchParams();
+
+      // Set/override the widget-specific params
       urlParams.set("widgetId", getWidgetId(widgetDef));
       urlParams.set("params", JSON.stringify(resolvedParams));
 
-      // Get current hash route (e.g., "/app" from "#/app")
-      const currentHash = window.location.hash;
+      // Get current hash route (e.g., "/app/Debug01" from "#/app/Debug01?...")
       const routeMatch = currentHash.match(/^#(\/.*?)(?:\?|$)/);
       const currentRoute = routeMatch ? routeMatch[1] : "/";
 
-      // Append query params to existing route hash
       const newUrl = `${window.location.pathname}#${currentRoute}?${urlParams.toString()}`;
       window.history.replaceState(
         { params: resolvedParams, widgetId: getWidgetId(widgetDef) },

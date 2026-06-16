@@ -9,6 +9,8 @@ interface WidgetMenuModalProps {
   onAddWidgets: (widgets: WidgetConfig[]) => void;
   widgets: WidgetConfig[];
   loading?: boolean;
+  /** The name of the dashboard tab that new widgets will be added to. */
+  currentTabName?: string;
 }
 
 interface CategoryGroup {
@@ -23,6 +25,7 @@ function WidgetMenuModal({
   onAddWidgets,
   widgets,
   loading = false,
+  currentTabName,
 }: WidgetMenuModalProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -418,6 +421,11 @@ function WidgetMenuModal({
 
         <div className="flex items-center gap-2.5 mt-auto pt-4 border-t border-surface-divider">
           <div className="flex gap-2.5 ml-auto">
+            {currentTabName && (
+              <span className="self-center text-xs text-gray-400 dark:text-gray-500">
+                {currentTabName}
+              </span>
+            )}
             <Button variant="outlined" size="sm" onClick={handleClose}>
               {t("common.cancel")}
             </Button>

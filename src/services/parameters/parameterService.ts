@@ -22,7 +22,9 @@ class ParameterService {
   /**
    * Fetch options for an endpoint parameter
    */
-  async fetchParamOptions({ parameter, widgetId, instanceId, baseUrl = 'http://localhost:8001' }: FetchOptionsParams): Promise<ParameterOption[]> {
+  private static DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+
+  async fetchParamOptions({ parameter, widgetId, instanceId, baseUrl = ParameterService.DEFAULT_BASE_URL }: FetchOptionsParams): Promise<ParameterOption[]> {
     if (!parameter.optionsEndpoint) {
       throw new Error('Endpoint parameter missing optionsEndpoint');
     }
@@ -109,20 +111,26 @@ class ParameterService {
       return url;
     }
     
-    // Normalize baseUrl: strip trailing slash, then extract origin to avoid
-    // path duplication (e.g. baseUrl=/api + endpoint=/api/v1/... = /api/api/v1/...)
+    // Normalize baseUrl: strip trailing slash, preserve path to allow
+    // baseUrl like http://localhost:8001/api to contribute /api prefix to the URL.
+    // Avoid path duplication (e.g. baseUrl=/api + endpoint=/api/v1/... → /api/api/v1/...)
     const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    let origin = normalizedBase;
-    try {
-      const parsed = new URL(normalizedBase);
-      origin = parsed.origin;
-    } catch {
-      // If not a valid absolute URL, use as-is
-    }
-    
-    // Ensure endpoint starts with /
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${origin}${normalizedEndpoint}`;
+    
+    let url: string;
+    try {
+      const baseParsed = new URL(normalizedBase);
+      const basePath = baseParsed.pathname.replace(/\/$/, '') || '/';
+      if (basePath !== '/' && normalizedEndpoint.startsWith(basePath)) {
+        // Endpoint already includes the base path, avoid duplication
+        url = `${baseParsed.origin}${normalizedEndpoint}`;
+      } else {
+        url = `${normalizedBase}${normalizedEndpoint}`;
+      }
+    } catch {
+      // If not a valid absolute URL, concatenate directly
+      url = `${normalizedBase}${normalizedEndpoint}`;
+    }
     
     if (parameter.optionsParams) {
       const params = new URLSearchParams();
