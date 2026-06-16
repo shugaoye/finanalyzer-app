@@ -437,11 +437,25 @@ function DebugWidget({
 
       defaults[paramName] = val;
       resolved[paramName] = val;
-      // Create a copy of the parameter with the correct name
+
+      // Map "text" type with static options to "dropdown" per OpenBB spec.
+      // DebugWidget loads definitions from paths (JSON paste, persisted config) that
+      // bypass convertToWidgetConfig, so the mapping must happen here as well.
+      const paramType = String(pRec.type || p.type || "string");
+      const paramOptions = (pRec.options || p.options) as unknown[] | undefined;
+      const mappedType =
+        paramType === "text" &&
+        Array.isArray(paramOptions) &&
+        paramOptions.length > 0
+          ? "dropdown"
+          : paramType;
+
+      // Create a copy of the parameter with the correct name and mapped type
       processedParams.push({
         ...p,
         name: paramName,
         paramName: paramName,
+        type: mappedType,
       } as ProcessedParameter);
     });
 
@@ -469,11 +483,24 @@ function DebugWidget({
 
       ((widgetDef.params || (widgetDef.data as Record<string, unknown>)?.params) || []).forEach((p) => {
         const paramName = getParamName(p);
-        // Create a copy of the parameter with the correct name
+        const pRec = p as unknown as ParamRecord;
+
+        // Map "text" type with static options to "dropdown" per OpenBB spec
+        const paramType = String(pRec.type || p.type || "string");
+        const paramOptions = (pRec.options || p.options) as unknown[] | undefined;
+        const mappedType =
+          paramType === "text" &&
+          Array.isArray(paramOptions) &&
+          paramOptions.length > 0
+            ? "dropdown"
+            : paramType;
+
+        // Create a copy of the parameter with the correct name and mapped type
         processedParams.push({
           ...p,
           name: paramName,
           paramName: paramName,
+          type: mappedType,
         } as ProcessedParameter);
       });
 

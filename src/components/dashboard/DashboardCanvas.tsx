@@ -908,11 +908,23 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
                           >;
                           const paramName =
                             (paramRecord.paramName as string) || param.name;
-                          const paramType =
+                          let paramType =
                             (paramRecord.type as string) || "string";
                           const paramOptions = paramRecord.options as
                             | Array<{ value: unknown; label: string }>
                             | undefined;
+
+                          // Map "text" type with static options to "dropdown" per OpenBB spec.
+                          // This mapping is applied at render time so it works regardless of
+                          // how params reached this point (e.g., DebugWidget JSON paste bypasses
+                          // convertToWidgetConfig where the same mapping is done at fetch time).
+                          if (
+                            paramType === "text" &&
+                            Array.isArray(paramOptions) &&
+                            paramOptions.length > 0
+                          ) {
+                            paramType = "dropdown";
+                          }
 
                           return (
                             <ParameterInput

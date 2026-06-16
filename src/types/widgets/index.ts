@@ -44,7 +44,7 @@ export interface ColumnDef {
 }
 
 // Widget parameter types
-export type WidgetParameterType = 'string' | 'number' | 'boolean' | 'select' | 'date' | 'color' | 'endpoint' | 'form' | 'tabs';
+export type WidgetParameterType = 'string' | 'number' | 'boolean' | 'select' | 'date' | 'color' | 'endpoint' | 'form' | 'tabs' | 'dropdown';
 
 // Form input parameter definition
 export interface FormInputParameter {

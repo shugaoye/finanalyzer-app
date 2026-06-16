@@ -4,6 +4,7 @@ import type { WidgetParameterType, WidgetParameter } from '../../types/widgets';
 import { isEndpointParameter } from '../../types/widgets';
 import FormParameterComponent from '../widgets/shared/FormParameterComponent';
 import EndpointParameterComponent from '../widgets/shared/EndpointParameterComponent';
+import DropdownParameterComponent from '../widgets/shared/DropdownParameterComponent';
 
 interface ParameterInputProps {
   paramName: string;
@@ -114,6 +115,31 @@ export function ParameterInput({
         </div>
       );
     }
+
+    case 'dropdown':
+      if (parameter) {
+        return (
+          <DropdownParameterComponent
+            parameter={parameter}
+            value={String(value || parameter.default || '')}
+            onChange={(newValue) => onChange(paramName, newValue)}
+            disabled={disabled}
+          />
+        );
+      }
+      // Fallback to select if no parameter object
+      return (
+        <div className="obb-parameter flex items-center justify-between gap-1 h-[20px]">
+          <select
+            id={`param-${paramName}`}
+            value={String(value || '')}
+            onChange={(e) => onChange(paramName, e.target.value)}
+            className={`${inputClasses} cursor-pointer bg-transparent dark:bg-transparent`}
+          >
+            <option value="">{label}</option>
+          </select>
+        </div>
+      );
 
     case 'date':
       return (

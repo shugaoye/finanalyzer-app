@@ -145,29 +145,36 @@ class WidgetService {
   private convertToWidgetConfig(widget: any, connection: any): WidgetConfig {
     // Convert params to WidgetParameter format
     const params: WidgetParameter[] = (widget.params || []).map(
-      (param: any) => ({
-        name: param.name,
-        paramName: param.paramName,
-        type: param.type as any,
-        label: param.label || param.name,
-        description: param.description,
-        default: param.default !== undefined ? param.default : param.value,
-        value: param.value,
-        required: param.required,
-        options: param.options,
-        min: param.min,
-        max: param.max,
-        step: param.step,
-        optionsEndpoint: param.optionsEndpoint,
-        optionsParams: param.optionsParams,
-        multiSelect: param.multiSelect,
-        style: param.style,
-        endpoint: param.endpoint,
-        inputParams: param.inputParams,
-        dependsOn: param.dependsOn,
-        show: param.show,
-        optional: param.optional,
-      }),
+      (param: any) => {
+        // Map "text" type with static options to "dropdown" per OpenBB spec
+        let paramType = param.type;
+        if (paramType === "text" && Array.isArray(param.options) && param.options.length > 0) {
+          paramType = "dropdown";
+        }
+        return {
+          name: param.name || param.paramName,
+          paramName: param.paramName,
+          type: paramType,
+          label: param.label || param.name,
+          description: param.description,
+          default: param.default !== undefined ? param.default : param.value,
+          value: param.value,
+          required: param.required,
+          options: param.options,
+          min: param.min,
+          max: param.max,
+          step: param.step,
+          optionsEndpoint: param.optionsEndpoint,
+          optionsParams: param.optionsParams,
+          multiSelect: param.multiSelect,
+          style: param.style,
+          endpoint: param.endpoint,
+          inputParams: param.inputParams,
+          dependsOn: param.dependsOn,
+          show: param.show,
+          optional: param.optional,
+        };
+      },
     );
 
     return {

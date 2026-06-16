@@ -3,6 +3,7 @@ import type { WidgetParameter } from '../../../types/widgets';
 import { isEndpointParameter, isFormParameter } from '../../../types/widgets';
 import EndpointParameterComponent from './EndpointParameterComponent';
 import FormParameterComponent from './FormParameterComponent';
+import DropdownParameterComponent from './DropdownParameterComponent';
 import { Input, Select, Checkbox } from '@openbb/ui';
 
 interface ParameterRendererProps {
@@ -137,6 +138,16 @@ const ParameterRenderer: React.FC<ParameterRendererProps> = ({
             ...(selectOptions.length === 0 ? [{ label: 'No options available', value: '' }] : [])
           ]}
           className="text-gray-900"
+        />
+      );
+
+    case 'dropdown':
+      return (
+        <DropdownParameterComponent
+          parameter={parameter}
+          value={String(value || '')}
+          onChange={(newValue) => onChange(newValue)}
+          disabled={disabled}
         />
       );
 
