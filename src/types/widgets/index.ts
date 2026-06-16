@@ -60,6 +60,16 @@ export interface FormInputParameter {
   required?: boolean;
 }
 
+// Option definition with optional extraInfo for Advanced Dropdown
+export interface ParameterOption {
+  value: unknown;
+  label: string;
+  extraInfo?: {
+    description?: string;
+    rightOfDescription?: string;
+  };
+}
+
 // Widget parameter definition
 export interface WidgetParameter {
   name: string;
@@ -76,6 +86,11 @@ export interface WidgetParameter {
   // For endpoint type
   optionsEndpoint?: string;
   optionsParams?: Record<string, unknown>;
+  // For endpoint type — Advanced Dropdown features
+  multiSelect?: boolean;
+  style?: {
+    popupWidth?: number;
+  };
   // For form type
   endpoint?: string;
   inputParams?: FormInputParameter[];
@@ -150,7 +165,7 @@ export interface WidgetInstance extends WidgetConfig {
   // Table configuration for table widgets (columnsDefs, etc.)
   tableConfig?: Record<string, unknown>;
   // New state properties for enhanced parameter system
-  paramOptions?: Record<string, Array<{ value: unknown; label: string }>>;
+  paramOptions?: Record<string, ParameterOption[]>;
   optionsLoading?: Record<string, boolean>;
   formErrors?: Record<string, string>;
 }

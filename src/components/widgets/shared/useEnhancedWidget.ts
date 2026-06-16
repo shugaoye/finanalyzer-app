@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import type { WidgetInstanceProps, WidgetParameter } from '../../../types/widgets';
+import type { WidgetInstanceProps, WidgetParameter, ParameterOption } from '../../../types/widgets';
 import { isEndpointParameter, isFormParameter } from '../../../types/widgets';
 import { parameterService } from '../../../services/parameters/parameterService';
 import { useWidgetData } from '../../../hooks/useWidgetData';
@@ -9,7 +9,7 @@ interface UseEnhancedWidgetResult {
   isLoading: boolean;
   error: string | null;
   data: unknown | null;
-  paramOptions: Record<string, Array<{ value: unknown; label: string }>>;
+  paramOptions: Record<string, ParameterOption[]>;
   optionsLoading: Record<string, boolean>;
   optionsError: Record<string, string>;
   formErrors: Record<string, string>;
@@ -28,8 +28,8 @@ export function useEnhancedWidget(
     params: widget.currentParams || {},
     enabled: !!widget.endpoint,
   });
-  const [paramOptions, setParamOptions] = useState<Record<string, Array<{ value: unknown; label: string }>>>(
-    widget.paramOptions as Record<string, Array<{ value: unknown; label: string }>> || {}
+  const [paramOptions, setParamOptions] = useState<Record<string, ParameterOption[]>>(
+    widget.paramOptions || {}
   );
   const [optionsLoading, setOptionsLoading] = useState<Record<string, boolean>>(
     widget.optionsLoading || {}
@@ -66,7 +66,7 @@ export function useEnhancedWidget(
         instanceId: widget.instanceId,
       });
 
-      setParamOptions((prev: Record<string, Array<{ value: unknown; label: string }>>) => ({
+      setParamOptions((prev: Record<string, ParameterOption[]>) => ({
         ...prev,
         [parameter.name]: options,
       }));

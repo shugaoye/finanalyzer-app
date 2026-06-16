@@ -1,8 +1,8 @@
-import type { WidgetParameter } from '../../types/widgets';
+import type { WidgetParameter, ParameterOption } from '../../types/widgets';
 
 interface ParamOptionsCache {
   [key: string]: {
-    options: Array<{ value: unknown; label: string }>;
+    options: ParameterOption[];
     timestamp: number;
   };
 }
@@ -17,17 +17,17 @@ interface FetchOptionsParams {
 class ParameterService {
   private optionsCache: ParamOptionsCache = {};
   private cacheDuration = 30000; // 30 seconds
-  private fetchPromises: Map<string, Promise<Array<{ value: unknown; label: string }>>> = new Map();
+  private fetchPromises: Map<string, Promise<ParameterOption[]>> = new Map();
 
   /**
    * Fetch options for an endpoint parameter
    */
-  async fetchParamOptions({ parameter, widgetId, instanceId, baseUrl = 'http://localhost:8000/api/v1' }: FetchOptionsParams): Promise<Array<{ value: unknown; label: string }>> {
+  async fetchParamOptions({ parameter, widgetId, instanceId, baseUrl = 'http://localhost:8001' }: FetchOptionsParams): Promise<ParameterOption[]> {
     if (!parameter.optionsEndpoint) {
       throw new Error('Endpoint parameter missing optionsEndpoint');
     }
 
-    const cacheKey = `${widgetId}:${instanceId}:${parameter.name}:${parameter.optionsEndpoint}`;
+    const cacheKey = `${widgetId}:${instanceId}:${parameter.name}:${parameter.optionsEndpoint}:${baseUrl}`;
     
     // Check if we already have a fetch in progress
     if (this.fetchPromises.has(cacheKey)) {
@@ -61,7 +61,7 @@ class ParameterService {
     parameter: WidgetParameter,
     baseUrl: string,
     cacheKey: string
-  ): Promise<Array<{ value: unknown; label: string }>> {
+  ): Promise<ParameterOption[]> {
     try {
       const url = this.buildOptionsUrl(parameter, baseUrl);
       const response = await fetch(url, {
@@ -96,7 +96,33 @@ class ParameterService {
    */
   private buildOptionsUrl(parameter: WidgetParameter, baseUrl: string): string {
     const endpoint = parameter.optionsEndpoint!;
-    const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+    
+    if (endpoint.startsWith('http')) {
+      const url = endpoint;
+      if (parameter.optionsParams) {
+        const params = new URLSearchParams();
+        Object.entries(parameter.optionsParams).forEach(([key, value]) => {
+          params.append(key, String(value));
+        });
+        return `${url}?${params.toString()}`;
+      }
+      return url;
+    }
+    
+    // Normalize baseUrl: strip trailing slash, then extract origin to avoid
+    // path duplication (e.g. baseUrl=/api + endpoint=/api/v1/... = /api/api/v1/...)
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    let origin = normalizedBase;
+    try {
+      const parsed = new URL(normalizedBase);
+      origin = parsed.origin;
+    } catch {
+      // If not a valid absolute URL, use as-is
+    }
+    
+    // Ensure endpoint starts with /
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${origin}${normalizedEndpoint}`;
     
     if (parameter.optionsParams) {
       const params = new URLSearchParams();
@@ -112,14 +138,24 @@ class ParameterService {
   /**
    * Process the API response into options format
    */
-  private processOptionsResponse(data: unknown): Array<{ value: unknown; label: string }> {
+  private processOptionsResponse(data: unknown): ParameterOption[] {
     if (Array.isArray(data)) {
       return data.map(item => {
         if (typeof item === 'object' && item !== null) {
-          return {
-            value: item.value !== undefined ? item.value : item.id || item.symbol,
-            label: item.label !== undefined ? item.label : item.name || String(item.value || item.id || item.symbol),
+          const obj = item as Record<string, unknown>;
+          const result: ParameterOption = {
+            value: obj.value !== undefined ? obj.value : obj.id || obj.symbol,
+            label: obj.label !== undefined ? String(obj.label) : String(obj.name || obj.value || obj.id || obj.symbol),
           };
+          // Preserve extraInfo for Advanced Dropdown
+          if (obj.extraInfo && typeof obj.extraInfo === 'object') {
+            const extra = obj.extraInfo as Record<string, unknown>;
+            result.extraInfo = {
+              description: typeof extra.description === 'string' ? extra.description : undefined,
+              rightOfDescription: typeof extra.rightOfDescription === 'string' ? extra.rightOfDescription : undefined,
+            };
+          }
+          return result;
         }
         return {
           value: item,

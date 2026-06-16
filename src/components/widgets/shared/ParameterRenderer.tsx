@@ -13,6 +13,7 @@ interface ParameterRendererProps {
   instanceId: string;
   disabled?: boolean;
   onFormSubmit?: (result: unknown) => void;
+  connectionUrl?: string;
 }
 
 const ParameterRenderer: React.FC<ParameterRendererProps> = ({
@@ -23,6 +24,7 @@ const ParameterRenderer: React.FC<ParameterRendererProps> = ({
   instanceId,
   disabled = false,
   onFormSubmit,
+  connectionUrl,
 }) => {
   // Memoized event handlers for better performance
   const handleStringChange = useCallback((value: string | number) => {
@@ -59,6 +61,7 @@ const ParameterRenderer: React.FC<ParameterRendererProps> = ({
         widgetId={widgetId}
         instanceId={instanceId}
         disabled={disabled}
+        connectionUrl={connectionUrl}
       />
     );
   }

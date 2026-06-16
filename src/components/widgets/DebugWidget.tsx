@@ -3,6 +3,7 @@ import { Button, Input, Label, Select, Textarea } from "@openbb/ui";
 import { useTranslation } from "react-i18next";
 import { WidgetFactory } from "../../services/widgets/widgetFactory";
 import { widgetService } from "../../services/widgets/widgetService";
+import { connectionService } from "../../services/connections/connectionService";
 import type {
   WidgetConfig,
   WidgetInstance,
@@ -59,6 +60,66 @@ function getWidgetId(w: WidgetConfig): string {
   return w.id || (r.widgetId as string) || "";
 }
 
+/**
+ * Enrich a widget config with connection info from the widget service.
+ * Persisted/manually-applied configs lack connectionUrl, which causes
+ * endpoint parameters to fall back to a hardcoded default URL.
+ *
+ * @param config - The widget config to enrich
+ * @param fallbackConnectionId - Optional connection ID to use if widget service lookup fails
+ */
+async function enrichConnectionInfo(
+  config: WidgetConfig,
+  fallbackConnectionId?: string,
+): Promise<WidgetConfig> {
+  if (config.connectionUrl) {
+    return config;
+  }
+
+  const configId = getWidgetId(config);
+
+  if (!configId) {
+    return config;
+  }
+
+  // Try widget service first
+  try {
+    const allWidgets = await widgetService.getWidgets();
+    const serviceWidget = allWidgets.find(
+      (w) => getWidgetId(w) === configId,
+    );
+    if (serviceWidget?.connectionUrl) {
+      return {
+        ...config,
+        connectionUrl: serviceWidget.connectionUrl,
+        connectionId: serviceWidget.connectionId,
+        connectionName: serviceWidget.connectionName,
+        connectionAuthentication:
+          serviceWidget.connectionAuthentication || [],
+      };
+    }
+  } catch (err) {
+    console.warn("[enrichConnectionInfo] widgetService lookup failed:", err);
+  }
+
+  // Fallback: use connectionId from config or widget data
+  const connId = config.connectionId || fallbackConnectionId;
+  if (connId) {
+    const conn = connectionService.getConnection(connId);
+    if (conn?.url) {
+      return {
+        ...config,
+        connectionUrl: conn.url,
+        connectionId: conn.id,
+        connectionName: conn.name,
+        connectionAuthentication: config.connectionAuthentication || conn.authentication || [],
+      };
+    }
+  }
+
+  return config;
+}
+
 function DebugWidget({
   widget,
   viewMode = "preview",
@@ -103,10 +164,17 @@ function DebugWidget({
         const configId = getWidgetId(widgetData.widgetConfig);
         if (configId !== lastWidgetConfigRef.current) {
           lastWidgetConfigRef.current = configId;
-          setWidgetDef(widgetData.widgetConfig);
+
+          // Enrich with connection info so endpoint parameters use the correct URL
+          const enrichedConfig = await enrichConnectionInfo(
+            widgetData.widgetConfig,
+            widgetData.connectionId || widgetData.widgetConfig.connectionId,
+          );
+
+          setWidgetDef(enrichedConfig);
           setWidgetIdInput(widgetData.widgetId || configId);
-          setJsonInput(JSON.stringify(widgetData.widgetConfig, null, 2));
-          initParams(widgetData.widgetConfig);
+          setJsonInput(JSON.stringify(enrichedConfig, null, 2));
+          initParams(enrichedConfig);
         }
         return;
       }
@@ -225,9 +293,25 @@ function DebugWidget({
       );
 
       if (found) {
-        setWidgetDef(found);
-        setJsonInput(JSON.stringify(found, null, 2));
-        initParams(found);
+        // Enrich with connection info so endpoint parameters use the correct URL
+        const enriched = await enrichConnectionInfo(found, found.connectionId);
+        const normalizedId = getWidgetId(enriched);
+        lastWidgetConfigRef.current = normalizedId;
+        setWidgetDef(enriched);
+        setWidgetIdInput(normalizedId);
+        setJsonInput(JSON.stringify(enriched, null, 2));
+        initParams(enriched);
+        // Persist the widget definition to parent component so the global
+        // parameter bar can resolve connectionUrl and widgetId correctly.
+        if (onWidgetUpdate) {
+          onWidgetUpdate({
+            id: widget.id,
+            data: {
+              widgetId: normalizedId,
+              widgetConfig: enriched,
+            },
+          });
+        }
         return;
       }
 
@@ -288,7 +372,7 @@ function DebugWidget({
     return errors;
   };
 
-  const handleApplyDefinition = useCallback(() => {
+  const handleApplyDefinition = useCallback(async () => {
     const parsed = parseJsonInput();
     if (!parsed) return;
 
@@ -314,11 +398,17 @@ function DebugWidget({
 
     const normalizedId = getWidgetId(normalized);
 
-    setWidgetDef(normalized);
+    // Enrich with connection info so endpoint parameters use the correct URL
+    const enrichedConfig = await enrichConnectionInfo(
+      normalized,
+      widgetData.connectionId || widgetData.widgetConfig?.connectionId,
+    );
+
+    setWidgetDef(enrichedConfig);
     setWidgetIdInput(normalizedId);
-    setJsonInput(JSON.stringify(normalized, null, 2));
+    setJsonInput(JSON.stringify(enrichedConfig, null, 2));
     lastWidgetConfigRef.current = normalizedId;
-    initParams(normalized);
+    initParams(enrichedConfig);
     openConsoleGroup();
 
     // Persist the widget definition to parent component.
@@ -329,7 +419,7 @@ function DebugWidget({
         id: widget.id,
         data: {
           widgetId: normalizedId,
-          widgetConfig: normalized
+          widgetConfig: enrichedConfig,
         }
       });
     }
@@ -990,6 +1080,10 @@ function DebugWidget({
                                     | Array<{ value: unknown; label: string }>
                                     | undefined
                                 }
+                                parameter={p}
+                                widgetId={getWidgetId(widgetDef)}
+                                instanceId={getWidgetId(widgetDef)}
+                                connectionUrl={widgetDef.connectionUrl || ""}
                               />
                             </div>
                           </div>

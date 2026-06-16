@@ -1,6 +1,9 @@
 
+
 import type { WidgetParameterType, WidgetParameter } from '../../types/widgets';
+import { isEndpointParameter } from '../../types/widgets';
 import FormParameterComponent from '../widgets/shared/FormParameterComponent';
+import EndpointParameterComponent from '../widgets/shared/EndpointParameterComponent';
 
 interface ParameterInputProps {
   paramName: string;
@@ -13,6 +16,8 @@ interface ParameterInputProps {
   onFormSubmit?: (result: unknown) => void;
   disabled?: boolean;
   connectionUrl?: string;
+  widgetId?: string;
+  instanceId?: string;
 }
 
 export function ParameterInput({
@@ -26,6 +31,8 @@ export function ParameterInput({
   onFormSubmit,
   disabled = false,
   connectionUrl = '',
+  widgetId = paramName,
+  instanceId = paramName,
 }: ParameterInputProps): JSX.Element {
   const toBoolean = (val: unknown): boolean => {
     if (typeof val === 'boolean') return val;
@@ -135,6 +142,33 @@ export function ParameterInput({
       );
 
     case 'endpoint':
+      if (parameter && isEndpointParameter(parameter) && widgetId && instanceId) {
+        return (
+          <EndpointParameterComponent
+            parameter={parameter}
+            value={String(value || parameter.default || '')}
+            onChange={(newValue) => onChange(paramName, newValue)}
+            widgetId={widgetId}
+            instanceId={instanceId}
+            disabled={disabled}
+            connectionUrl={connectionUrl}
+          />
+        );
+      }
+      // Fallback to text input if no parameter object provided
+      return (
+        <div className="obb-parameter flex items-center justify-between gap-1 h-[20px]">
+          <input
+            type="text"
+            id={`param-${paramName}`}
+            placeholder={label}
+            value={String(value || '')}
+            onChange={(e) => onChange(paramName, e.target.value)}
+            className={inputClasses}
+          />
+        </div>
+      );
+
     case 'tabs':
     default:
       return (

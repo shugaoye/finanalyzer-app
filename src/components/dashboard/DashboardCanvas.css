@@ -527,7 +527,6 @@
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   transition: box-shadow 0.2s, border-color 0.2s;
-  overflow: hidden;
   position: relative;
 }
 

@@ -160,6 +160,8 @@ class WidgetService {
         step: param.step,
         optionsEndpoint: param.optionsEndpoint,
         optionsParams: param.optionsParams,
+        multiSelect: param.multiSelect,
+        style: param.style,
         endpoint: param.endpoint,
         inputParams: param.inputParams,
         dependsOn: param.dependsOn,

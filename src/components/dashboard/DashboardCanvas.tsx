@@ -655,12 +655,18 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
   const handleAddWidgetsFromMenu = async (selectedWidgets: WidgetConfig[]) => {
     if (!activeId) return;
     for (const widgetConfig of selectedWidgets) {
+      const currentTabName = tabs.find((t) => t.id === activeTab)?.name;
       const newWidget: Widget = {
         id: `${widgetConfig.id}-${Date.now()}`,
         type: widgetConfig.type || "metric",
         title: widgetConfig.name,
         position: { x: 0, y: 0, w: widgetConfig.gridData?.w || 2, h: widgetConfig.gridData?.h || 2 },
-        data: widgetConfig,
+        data: {
+          ...widgetConfig,
+          ...(activeTab
+            ? { tabId: activeTab, tabName: currentTabName || undefined }
+            : {}),
+        },
       };
       try {
         await addWidgetApi(activeId, widgetToApi(newWidget));
@@ -930,7 +936,25 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
                               options={paramOptions}
                               parameter={param as any}
                               onFormSubmit={() => handleRefreshWidget(widget.id)}
+                              widgetId={(() => {
+                                // For debug widget, resolve widgetId from the loaded definition's data
+                                if (widget.type === "debug" && widget.data && typeof widget.data === 'object') {
+                                  const debugData = widget.data as Record<string, unknown>;
+                                  const widgetConfig = debugData.widgetConfig as Record<string, unknown> | undefined;
+                                  const loadedWidgetId = (debugData.widgetId as string) || (widgetConfig?.id as string);
+                                  if (loadedWidgetId) return loadedWidgetId;
+                                }
+                                return widget.type || widget.id;
+                              })()}
+                              instanceId={widget.id}
                               connectionUrl={(() => {
+                                // For debug widget, resolve connectionUrl from the loaded definition's data
+                                if (widget.type === "debug" && widget.data && typeof widget.data === 'object') {
+                                  const debugData = widget.data as Record<string, unknown>;
+                                  const widgetConfig = debugData.widgetConfig as Record<string, unknown> | undefined;
+                                  const connUrl = widgetConfig?.connectionUrl as string | undefined;
+                                  if (connUrl) return connUrl;
+                                }
                                 const allDefs = [...widgetDefinitions, ...customWidgets];
                                 let def = findWidgetDefinition(widget.id, allDefs);
                                 if (!def && widget.data && typeof widget.data === 'object') {
@@ -1299,14 +1323,17 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
                           }));
                         }}
                         onWidgetUpdate={(widgetUpdateData) => {
-                          // Update the widget in the widgets array
+                          // Update the widget in the widgets array, preserving tabId/tabName
                           setWidgets((prevWidgets) =>
                             prevWidgets.map((w) =>
                               w.id === widget.id
                                 ? {
                                     ...w,
                                     id: widgetUpdateData.id,
-                                    data: widgetUpdateData.data
+                                    data: {
+                                      ...w.data,
+                                      ...(widgetUpdateData.data as Record<string, unknown>),
+                                    },
                                   }
                                 : w
                             )
