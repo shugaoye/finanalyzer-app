@@ -8,14 +8,19 @@ import path from "node:path";
 const env = loadEnv("", process.cwd(), "");
 
 function getApiHostnames(): string[] {
+  const hosts: string[] = [];
   const apiUrl = env.VITE_API_BASE_URL;
-  if (!apiUrl) return [];
-  try {
-    const url = new URL(apiUrl);
-    return [url.hostname];
-  } catch {
-    return [];
+  if (apiUrl) {
+    try {
+      const url = new URL(apiUrl);
+      hosts.push(url.hostname);
+    } catch { /* ignore invalid URL */ }
   }
+  // Also allow deployment hosts (Cloudflare Pages, etc.)
+  if (env.VITE_APP_HOST) {
+    hosts.push(...env.VITE_APP_HOST.split(",").map(h => h.trim()).filter(Boolean));
+  }
+  return hosts;
 }
 
 function existsSync(relativePath: string): boolean {
