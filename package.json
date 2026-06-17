@@ -1,7 +1,7 @@
 {
   "name": "finanalyzer-app",
   "private": true,
-  "version": "1.15.5-dev",
+  "version": "1.15.6-dev",
   "description": "Finanalyzer 前端应用 - 投资组合管理平台",
   "type": "module",
   "scripts": {
@@ -22,6 +22,12 @@
     "@tanstack/react-query": "^5.8.0",
     "@tanstack/react-router": "^1.168.7",
     "@tanstack/router-plugin": "^1.167.8",
+    "@tiptap/extension-color": "^3.26.1",
+    "@tiptap/extension-placeholder": "^3.26.1",
+    "@tiptap/extension-text-style": "^3.26.1",
+    "@tiptap/extension-underline": "^3.26.1",
+    "@tiptap/react": "^3.26.1",
+    "@tiptap/starter-kit": "^3.26.1",
     "ag-grid-community": "^35.2.1",
     "ag-grid-react": "^35.2.1",
     "axios": "^1.6.0",

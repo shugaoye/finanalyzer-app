@@ -24,6 +24,7 @@ import {
   HtmlWidget,
   MarkdownWidget,
   MetricWidget,
+  NoteWidget,
   ManageTabsModal,
   TableWidget,
   TableSettingsModal,
@@ -219,6 +220,9 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
   const [tableSettings, setTableSettings] = useState<Record<string, TableSettings>>({});
   const [openTableSettingsWidgetId, setOpenTableSettingsWidgetId] = useState<string | null>(null);
   const [isManageTabsOpen, setIsManageTabsOpen] = useState(false);
+  const [noteControlsVisible, setNoteControlsVisible] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     if (propId && propId !== activeId) {
@@ -1024,6 +1028,56 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
                       </div>
                     )}
                     <div className="widget-header-right">
+                      {/* Eye toggle for note widgets — show/hide editing controls */}
+                      {widget.type === "note" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setNoteControlsVisible((prev) => ({
+                              ...prev,
+                              [widget.id]: !(prev[widget.id] ?? true),
+                            }));
+                          }}
+                          title={
+                            (noteControlsVisible[widget.id] ?? true)
+                              ? "Hide editing controls"
+                              : "Show editing controls"
+                          }
+                        >
+                          {(noteControlsVisible[widget.id] ?? true) ? (
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          ) : (
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                              <line x1="1" y1="1" x2="23" y2="23" />
+                              <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                            </svg>
+                          )}
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => handleRefreshWidget(widget.id)} title={t("common.refresh")}>
                         <Icon name={"refresh-right" as never} size={16} />
                       </Button>
@@ -1312,6 +1366,47 @@ export function DashboardCanvas({ dashboardId: propId, activeTab: propActiveTab,
                           } as any
                         }
                         mode={widgetDebugModes[widget.id] ? "debug" : undefined}
+                        onUpdate={(params) => {
+                          setWidgetParameters((prev) => ({
+                            ...prev,
+                            [widget.id]: {
+                              ...prev[widget.id],
+                              values: {
+                                ...prev[widget.id]?.values,
+                                ...params,
+                              },
+                            },
+                          }));
+                        }}
+                        onParametersChange={(params, values) => {
+                          setWidgetParameters((prev) => ({
+                            ...prev,
+                            [widget.id]: { params, values },
+                          }));
+                        }}
+                        onRefresh={() => handleRefreshWidget(widget.id)}
+                      />
+                    )}
+                    {widget.type === "note" && (
+                      <NoteWidget
+                        widget={
+                          {
+                            ...widget,
+                            ...findWidgetDefinition(
+                              widget.id,
+                              [...widgetDefinitions, ...customWidgets],
+                              widget.data as Record<string, unknown>,
+                            ),
+                            currentParams:
+                              widgetParameters[widget.id]?.values || {},
+                            instanceId: widget.id,
+                            dashboardId: activeId,
+                            data: widget.data,
+                            error: widgetErrors[widget.id],
+                          } as any
+                        }
+                        mode={widgetDebugModes[widget.id] ? "debug" : undefined}
+                        showControls={noteControlsVisible[widget.id] ?? true}
                         onUpdate={(params) => {
                           setWidgetParameters((prev) => ({
                             ...prev,

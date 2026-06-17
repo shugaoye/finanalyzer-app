@@ -1,5 +1,6 @@
 import { HtmlWidget } from "../../components/widgets/HtmlWidget";
 import { MarkdownWidget } from "../../components/widgets/MarkdownWidget";
+import { NoteWidget } from "../../components/widgets/shared/NoteWidget";
 import DebugWidget from "../../components/widgets/DebugWidget";
 import { TableWidget } from "../../components/widgets/shared/TableWidget";
 import { ChartWidget } from "../../components/widgets/shared/ChartWidget";
@@ -392,6 +393,23 @@ WidgetFactory.registerWidgetType({
     },
   ],
   renderer: HtmlWidget,
+});
+
+// Register Note widget type
+WidgetFactory.registerWidgetType({
+  type: "note",
+  displayName: "Note",
+  description: "A widget that displays rich note content with structured formatting",
+  defaultGridData: { w: 6, h: 5 },
+  supportedParameters: [
+    {
+      name: "title",
+      type: "string",
+      label: "Title",
+      default: "Note",
+    },
+  ],
+  renderer: NoteWidget,
 });
 
 // Register Debug widget type

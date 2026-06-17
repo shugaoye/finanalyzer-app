@@ -262,7 +262,7 @@ export default {
       english: "English",
       chinese: "中文",
     },
-    version: "v1.15.5-dev", // Replace with the actual version number
+    version: "v1.15.6-dev", // Replace with the actual version number
   },
   mobileNav: {
     menu: "菜单",

@@ -265,6 +265,92 @@
   }
 }
 
+/* ===== ProseMirror / TipTap Core Styles (matches OpenBB reference) ===== */
+.ProseMirror {
+  position: relative;
+  overflow-wrap: break-word;
+  white-space: break-spaces;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 3px solid rgb(104, 206, 248);
+}
+
+.ProseMirror pre {
+  white-space: pre-wrap;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  pointer-events: none;
+  height: 0;
+}
+
+.dark .ProseMirror p.is-editor-empty:first-child::before {
+  color: #6d6e74;
+}
+
+.ProseMirror-gapcursor {
+  display: none;
+  pointer-events: none;
+  position: relative;
+}
+
+.ProseMirror-focused .ProseMirror-gapcursor {
+  display: block;
+}
+
+/* ProseMirror list styling — Tailwind reset hides list-style by default */
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ul ul {
+  list-style-type: circle;
+}
+
+.ProseMirror ul ul ul {
+  list-style-type: square;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror ol ol {
+  list-style-type: lower-alpha;
+}
+
+.ProseMirror ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.ProseMirror li {
+  position: relative;
+}
+
+.ProseMirror li p {
+  margin: 0;
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;

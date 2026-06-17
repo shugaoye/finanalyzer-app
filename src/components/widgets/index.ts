@@ -5,6 +5,8 @@ export { ChartWidget } from "./shared/ChartWidget";
 export { HtmlWidget } from "./shared/HtmlWidget";
 export { MarkdownWidget } from "./MarkdownWidget";
 export { MetricWidget } from "./shared/MetricWidget";
+export { NoteWidget } from "./shared/NoteWidget";
+export { NoteEditor } from "./shared/NoteEditor";
 export { TableWidget } from "./shared/TableWidget";
 export { default as TableSettingsModal } from "./TableSettingsModal";
 
